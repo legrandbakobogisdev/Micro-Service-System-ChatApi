@@ -1,0 +1,56 @@
+{
+    "name": "microservices-platform",
+    "version": "1.0.0",
+    "description": "Microservices platform",
+    "main": "index.js",
+    "scripts": {
+        "setup:env": "node scripts/setup-env.js",
+        "generate:secrets": "node scripts/generate-secrets.js",
+        "generate:jwt": "node scripts/generate-secrets.js --jwt-only",
+        "generate:secrets:custom": "node scripts/generate-secrets.js --db-password=20022003lolas",
+        "check:env": "node scripts/check-env.js",
+        "create:structure": "node scripts/create-structure.js",
+        "install:all": "npm run install:services",
+        "install:services": "node -e \"const fs = require('fs'); const { execSync } = require('child_process'); const dirs = fs.readdirSync('services').filter(f => fs.statSync('services/' + f).isDirectory()); dirs.forEach(d => { console.log('📦 Installing', d); execSync('npm install', { cwd: 'services/' + d, stdio: 'inherit' }); });\"",
+        "docker:dev": "docker compose up -d",
+        "docker:prod": "docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile isolated up -d --build",
+        "docker:down": "docker compose --profile compact --profile isolated down",
+        "docker:clean": "docker compose --profile compact --profile isolated down -v --remove-orphans",
+        "docker:logs": "docker compose logs -f",
+        "docker:ps": "docker compose ps",
+        "docker:db": "docker compose --profile compact up -d mongodb-common redis zookeeper kafka",
+        "dev:auth": "cd services/auth-service && npm run dev",
+        "dev:shop": "cd services/shop-service && npm run dev",
+        "dev:subscription": "cd services/subscription-service && npm run dev",
+        "dev:payment": "cd services/payment-service && npm run dev",
+        "dev:catalog": "cd services/catalog-service && npm run dev",
+        "dev:order": "cd services/order-service && npm run dev",
+        "dev:search": "cd services/search-service && npm run dev",
+        "dev:notification": "cd services/notification-service && npm run dev",
+        "dev:analytics": "cd services/analytics-service && npm run dev",
+        "dev:support": "cd services/support-service && npm run dev",
+        "dev:media": "cd services/media-service && npm run dev",
+        "dev:gateway": "cd services/api-gateway && npm run dev",
+        "start:all": "npm-run-all --parallel dev:*",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [
+        "realtime",
+        "microservices",
+        "kafka",
+        "docker",
+        "nodejs"
+    ],
+    "author": "",
+    "license": "MIT",
+    "devDependencies": {
+        "@faker-js/faker": "^10.3.0",
+        "npm-run-all": "^4.1.5"
+    },
+    "dependencies": {
+        "axios": "^1.13.4",
+        "dotenv": "^17.2.3",
+        "jsonwebtoken": "^9.0.3",
+        "uuid": "^13.0.0"
+    }
+}
