@@ -1,24 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 
-const servicesDir = path.join(__dirname, 'services');
+const servicesDir = path.join(__dirname, '..', 'services');
 const services = fs.readdirSync(servicesDir).filter(f => fs.statSync(path.join(servicesDir, f)).isDirectory());
 
 const servicePrefixMap = {
   'auth-service': '/api/auth',
-  'shop-service': '/api/shop',
-  'catalog-service': '/api/catalog',
-  'search-service': '/api/search',
-  'review-service': '/api/reviews',
   'notification-service': '/api/notification',
   'chat-service': '/api/chat',
   'media-service': '/api/media',
-  'account-service': '/api/account',
-  'payment-service':'/api/payment'
+  'payment-service': '/api/payment',
+  'analytics-service': '/api/analytics',
+  'subscription-service': '/api/subscription',
+  'support-service': '/api/support',
 };
 
-let md = `# Mannathan Backend API Documentation\n\n`;
-md += `This documentation covers all the microservices endpoints exposed through the API gateway.\n\n`;
+let md = `# ChatApp API Documentation\n\n`;
+md += `Real-time messaging platform API - All microservices endpoints exposed through the API gateway.\n\n`;
 md += `## Base URL\n\n\`http://localhost:8000\`\n\n`;
 md += `## Authentication\n\nMost endpoints require a Bearer token in the \`Authorization\` header:\n\n\`\`\`\nAuthorization: Bearer <your_jwt_token>\n\`\`\`\n\n---\n\n`;
 
@@ -31,7 +29,8 @@ for (const service of services) {
   const routeFiles = fs.readdirSync(routesDir).filter(f => f.endsWith('.routes.js') || f.endsWith('.js'));
   if (routeFiles.length === 0) continue;
 
-  md += `## ${service.replace('-service', '').toUpperCase()} Service\n\n`;
+  const serviceName = service.replace('-service', '').replace(/^\w/, c => c.toUpperCase());
+  md += `## ${serviceName} Service\n\n`;
   md += `Base prefix: \`${servicePrefixMap[service] || '/api/' + service.replace('-service', '')}\`\n\n`;
 
   for (const file of routeFiles) {
@@ -44,7 +43,8 @@ for (const service of services) {
     let prefix = servicePrefixMap[service] || `/api/${service.replace('-service', '')}`;
 
     let hasRoutes = false;
-    let fileMd = `### Module: ${file.replace('.routes.js', '').replace('.js', '')}\n\n`;
+    const moduleName = file.replace('.routes.js', '').replace('.js', '');
+    let fileMd = `### Module: ${moduleName}\n\n`;
     fileMd += `| Method | Endpoint | Description |\n`;
     fileMd += `| --- | --- | --- |\n`;
 
@@ -71,5 +71,6 @@ for (const service of services) {
   }
 }
 
-fs.writeFileSync(path.join(__dirname, 'api_documentation.md'), md);
-console.log('Markdown generated successfully.');
+const outputPath = path.join(__dirname, '../docs', 'api_documentation.md');
+fs.writeFileSync(outputPath, md);
+console.log('✅ API markdown documentation generated at api_documentation.md');
