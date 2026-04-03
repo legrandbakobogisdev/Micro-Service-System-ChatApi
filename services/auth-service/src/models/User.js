@@ -45,10 +45,10 @@ const userSchema = new mongoose.Schema({
         default: 'Hey there! I am using ChatApp',
         maxlength: 500
     },
-    avatar: {
+    profilePhotoUrl: {
         type: String
     },
-    avatarPublicId: {
+    profilePhotoPublicId: {
         type: String
     },
     role: {

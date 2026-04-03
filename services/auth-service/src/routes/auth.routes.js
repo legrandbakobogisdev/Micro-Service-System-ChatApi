@@ -1,5 +1,6 @@
 const express = require('express');
 const authController = require('../controllers/authController');
+const keyController = require('../controllers/keyController');
 const { authenticate } = require('../middlewares/auth');
 const {
     registerValidation,
@@ -7,7 +8,9 @@ const {
     refreshTokenValidation,
     updateProfileValidation,
     changePasswordValidation,
-    updateSettingsValidation
+    updateSettingsValidation,
+    uploadKeysValidation,
+    replenishKeysValidation
 } = require('../middlewares/validators');
 
 const router = express.Router();
@@ -30,5 +33,10 @@ router.post('/settings/block/:targetUserId', authenticate, authController.toggle
 // User retrieval
 router.get('/users/:userId', authenticate, authController.getUser);
 router.patch('/users/:userId/last-seen', authController.updateLastSeen);
+
+// E2EE Keys & Device routes
+router.post('/keys', authenticate, uploadKeysValidation, keyController.uploadKeys);
+router.get('/keys/:userId', authenticate, keyController.getKeys);
+router.post('/keys/replenish', authenticate, replenishKeysValidation, keyController.replenishKeys);
 
 module.exports = router;

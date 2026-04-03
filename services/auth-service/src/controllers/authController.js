@@ -34,7 +34,7 @@ function generateTokens(userId, role) {
  * @access Public
  */
 exports.register = asyncHandler(async (req, res) => {
-    const { email, password, firstName, lastName, phoneNumber, username, about, provider } = req.body;
+    const { email, password, firstName, lastName, phoneNumber, username, about, provider, profilePhotoUrl, profilePhotoPublicId } = req.body;
 
     // Check if user exists by email
     const existingUser = await User.findOne({ email });
@@ -60,6 +60,8 @@ exports.register = asyncHandler(async (req, res) => {
         username,
         about: about || 'Hey there! I am using ChatApp',
         provider: provider || 'email',
+        profilePhotoUrl,
+        profilePhotoPublicId,
         verificationToken: crypto.randomBytes(32).toString('hex'),
         // Default settings are defined in the schema
     });
@@ -76,7 +78,7 @@ exports.register = asyncHandler(async (req, res) => {
             lastName: user.lastName,
             username: user.username,
             phoneNumber: user.phoneNumber,
-            avatar: user.avatar,
+            profilePhotoUrl: user.profilePhotoUrl,
             about: user.about
         });
     } catch (error) {
@@ -217,7 +219,7 @@ exports.getUser = asyncHandler(async (req, res) => {
  * @access Private
  */
 exports.updateProfile = asyncHandler(async (req, res) => {
-    const { firstName, lastName, phoneNumber, username, about, avatar, avatarPublicId } = req.body;
+    const { firstName, lastName, phoneNumber, username, about, profilePhotoUrl, profilePhotoPublicId } = req.body;
 
     const user = await User.findById(req.user.id);
     if (!user) throw new NotFoundError('User not found');
@@ -232,8 +234,8 @@ exports.updateProfile = asyncHandler(async (req, res) => {
     if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
     if (username !== undefined) user.username = username;
     if (about !== undefined) user.about = about;
-    if (avatar !== undefined) user.avatar = avatar;
-    if (avatarPublicId !== undefined) user.avatarPublicId = avatarPublicId;
+    if (profilePhotoUrl !== undefined) user.profilePhotoUrl = profilePhotoUrl;
+    if (profilePhotoPublicId !== undefined) user.profilePhotoPublicId = profilePhotoPublicId;
 
     await user.save();
     logger.info(`User profile updated: ${user.id}`);
@@ -243,7 +245,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
         await producer.sendMessage(TOPICS.USER_UPDATED, {
             userId: user.id,
             email: user.email,
-            updates: { firstName, lastName, phoneNumber, username, about, avatar }
+            updates: { firstName, lastName, phoneNumber, username, about, profilePhotoUrl }
         });
     } catch (error) {
         logger.error('Failed to publish USER_UPDATED event:', error);

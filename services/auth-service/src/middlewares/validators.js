@@ -16,6 +16,8 @@ exports.registerValidation = [
     body('phoneNumber').optional().trim().isMobilePhone('any').withMessage('Valid phone number is required'),
     body('about').optional().trim().isLength({ max: 500 }).withMessage('About must be max 500 characters'),
     body('provider').optional().isIn(['email', 'google', 'apple']).withMessage('Invalid provider'),
+    body('profilePhotoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Profile photo must be a valid URL'),
+    body('profilePhotoPublicId').optional({ checkFalsy: true }).trim(),
     validate
 ];
 
@@ -36,7 +38,8 @@ exports.updateProfileValidation = [
     body('username').optional({ checkFalsy: true }).trim().isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters'),
     body('phoneNumber').optional({ checkFalsy: true }).trim().isMobilePhone('any').withMessage('Valid phone number is required'),
     body('about').optional({ checkFalsy: true }).trim().isLength({ max: 500 }).withMessage('About must be max 500 characters'),
-    body('avatar').optional({ checkFalsy: true }).trim().isURL().withMessage('Avatar must be a valid URL'),
+    body('profilePhotoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Profile photo must be a valid URL'),
+    body('profilePhotoPublicId').optional({ checkFalsy: true }).trim(),
     validate
 ];
 
@@ -69,5 +72,24 @@ exports.updateSettingsValidation = [
     body('chat.enterToSend').optional().isBoolean(),
     body('account').optional().isObject().withMessage('Account must be an object'),
     body('account.language').optional().trim().isLength({ min: 2, max: 5 }).withMessage('Invalid language code'),
+    validate
+];
+
+exports.uploadKeysValidation = [
+    body('deviceId').notEmpty().withMessage('Device ID is required'),
+    body('registrationId').isNumeric().withMessage('Registration ID is required'),
+    body('identityKey').notEmpty().withMessage('Identity Key is required'),
+    body('signedPreKey.keyId').isNumeric().withMessage('Signed PreKey ID is required'),
+    body('signedPreKey.publicKey').notEmpty().withMessage('Signed PreKey PublicKey is required'),
+    body('signedPreKey.signature').notEmpty().withMessage('Signed PreKey Signature is required'),
+    body('oneTimePreKeys').isArray().withMessage('OneTimePreKeys must be an array'),
+    body('fcmToken').optional().trim(),
+    body('deviceInfo').optional().isObject(),
+    validate
+];
+
+exports.replenishKeysValidation = [
+    body('deviceId').notEmpty().withMessage('Device ID is required'),
+    body('oneTimePreKeys').isArray().withMessage('OneTimePreKeys must be an array'),
     validate
 ];

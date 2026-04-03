@@ -5,6 +5,7 @@ const TOPICS = {
     USER_DELETED: 'user.deleted',
     USER_VERIFIED: 'user.verified',
     USER_LOGGED_IN: 'user.logged_in',
+    DEVICE_REGISTERED: 'device.registered',
 
     // Chat Events
     CHAT_MESSAGE_SENT: 'chat.message_sent',
