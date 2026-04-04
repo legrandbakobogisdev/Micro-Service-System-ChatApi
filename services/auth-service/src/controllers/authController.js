@@ -2,12 +2,12 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { storeRefreshToken, getRefreshToken, deleteRefreshToken, storeSession } = require('../config/redis');
-const { getProducer } = require('../../shared/kafka-config/producer');
-const { TOPICS } = require('../../shared/kafka-config/topics');
-const { createLogger } = require('../../shared/utils/logger');
-const { AuthError, ValidationError, NotFoundError } = require('../../shared/utils/errorHandler');
-const asyncHandler = require('../../shared/utils/asyncHandler');
-const ApiResponse = require('../../shared/utils/response');
+const { getProducer } = require('../../../../shared/kafka-config/producer');
+const { TOPICS } = require('../../../../shared/kafka-config/topics');
+const { createLogger } = require('../../../../shared/utils/logger');
+const { AuthError, ValidationError, NotFoundError } = require('../../../../shared/utils/errorHandler');
+const asyncHandler = require('../../../../shared/utils/asyncHandler');
+const ApiResponse = require('../../../../shared/utils/response');
 
 const logger = createLogger('auth-service');
 

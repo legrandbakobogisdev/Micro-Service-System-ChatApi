@@ -1,10 +1,10 @@
 const DeviceKey = require('../models/DeviceKey');
-const { getProducer } = require('../../shared/kafka-config/producer');
-const { TOPICS } = require('../../shared/kafka-config/topics');
-const { ValidationError, NotFoundError } = require('../../shared/utils/errorHandler');
-const asyncHandler = require('../../shared/utils/asyncHandler');
-const ApiResponse = require('../../shared/utils/response');
-const { createLogger } = require('../../shared/utils/logger');
+const { getProducer } = require('../../../../shared/kafka-config/producer');
+const { TOPICS } = require('../../../../shared/kafka-config/topics');
+const { ValidationError, NotFoundError } = require('../../../../shared/utils/errorHandler');
+const asyncHandler = require('../../../../shared/utils/asyncHandler');
+const ApiResponse = require('../../../../shared/utils/response');
+const { createLogger } = require('../../../../shared/utils/logger');
 
 const logger = createLogger('auth-service');
 

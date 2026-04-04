@@ -38,7 +38,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"email\": \"sample_email\",\n  \"password\": \"sample_password\",\n  \"firstName\": \"sample_firstName\",\n  \"lastName\": \"sample_lastName\",\n  \"username\": \"sample_username\",\n  \"phoneNumber\": \"sample_phoneNumber\",\n  \"about\": \"sample_about\",\n  \"provider\": \"sample_provider\",\n  \"profilePhotoUrl\": \"sample_profilePhotoUrl\",\n  \"profilePhotoPublicId\": \"sample_profilePhotoPublicId\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -78,7 +78,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"email\": \"sample_email\",\n  \"password\": \"sample_password\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -118,7 +118,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"refreshToken\": \"sample_refreshToken\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -229,7 +229,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"firstName\": \"sample_firstName\",\n  \"lastName\": \"sample_lastName\",\n  \"username\": \"sample_username\",\n  \"phoneNumber\": \"sample_phoneNumber\",\n  \"about\": \"sample_about\",\n  \"profilePhotoUrl\": \"sample_profilePhotoUrl\",\n  \"profilePhotoPublicId\": \"sample_profilePhotoPublicId\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -269,7 +269,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"currentPassword\": \"sample_currentPassword\",\n  \"newPassword\": \"sample_newPassword\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -309,7 +309,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"privacy\": \"sample_privacy\",\n  \"notifications\": \"sample_notifications\",\n  \"chat\": \"sample_chat\",\n  \"account\": \"sample_account\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -480,7 +480,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"deviceId\": \"sample_deviceId\",\n  \"registrationId\": \"sample_registrationId\",\n  \"identityKey\": \"sample_identityKey\",\n  \"signedPreKey\": {\n    \"keyId\": \"sample_keyId\",\n    \"publicKey\": \"sample_publicKey\",\n    \"signature\": \"sample_signature\"\n  },\n  \"oneTimePreKeys\": \"sample_oneTimePreKeys\",\n  \"fcmToken\": \"sample_fcmToken\",\n  \"deviceInfo\": \"sample_deviceInfo\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -558,7 +558,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \n}",
+              "raw": "{\n  \"deviceId\": \"sample_deviceId\",\n  \"oneTimePreKeys\": \"sample_oneTimePreKeys\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

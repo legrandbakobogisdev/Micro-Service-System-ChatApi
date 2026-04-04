@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { AuthError, ForbiddenError } = require('../../shared/utils/errorHandler');
-const asyncHandler = require('../../shared/utils/asyncHandler');
+const { AuthError, ForbiddenError } = require('../../../../shared/utils/errorHandler');
+const asyncHandler = require('../../../../shared/utils/asyncHandler');
 
 exports.authenticate = asyncHandler(async (req, res, next) => {
     const authHeader = req.headers.authorization;

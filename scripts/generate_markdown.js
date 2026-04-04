@@ -37,7 +37,7 @@ for (const service of services) {
     const filePath = path.join(routesDir, file);
     const content = fs.readFileSync(filePath, 'utf8');
     
-    const regex = /router\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"]/g;
+    const regex = /router\.(get|post|put|patch|delete)\(\s*['"]([^'"]+)['"](.*)/g;
     let match;
     
     let prefix = servicePrefixMap[service] || `/api/${service.replace('-service', '')}`;
@@ -45,13 +45,14 @@ for (const service of services) {
     let hasRoutes = false;
     const moduleName = file.replace('.routes.js', '').replace('.js', '');
     let fileMd = `### Module: ${moduleName}\n\n`;
-    fileMd += `| Method | Endpoint | Description |\n`;
-    fileMd += `| --- | --- | --- |\n`;
+    fileMd += `| Method | Endpoint | Description | Body |\n`;
+    fileMd += `| --- | --- | --- | --- |\n`;
 
     while ((match = regex.exec(content)) !== null) {
       hasRoutes = true;
       const method = match[1].toUpperCase();
       let routePath = match[2];
+      const restOfLine = match[3];
       
       let fullPath = `${prefix}${routePath === '/' ? '' : routePath}`.replace(/\/+/g, '/');
 
@@ -62,7 +63,41 @@ for (const service of services) {
       if (method === 'PATCH') methodBadge = '🟡 PATCH';
       if (method === 'DELETE') methodBadge = '🔴 DELETE';
 
-      fileMd += `| **${methodBadge}** | \`${fullPath}\` | |\n`;
+      let bodyCell = '-';
+      if (['POST', 'PUT', 'PATCH'].includes(method)) {
+         let dummyBody = {};
+         const valMatch = restOfLine.match(/([a-zA-Z0-9_]+Validation)/);
+         if (valMatch) {
+             const valName = valMatch[1];
+             const valPath = path.join(servicesDir, service, 'src', 'middlewares', 'validators.js');
+             if (fs.existsSync(valPath)) {
+                 const valContent = fs.readFileSync(valPath, 'utf8');
+                 const startIndex = valContent.indexOf(`exports.${valName}`);
+                 if (startIndex !== -1) {
+                     const nextIndex = valContent.indexOf('exports.', startIndex + 10);
+                     const limitIndex = nextIndex > -1 ? nextIndex : valContent.length;
+                     const block = valContent.substring(startIndex, limitIndex);
+                     const bodyRegex = /body\(['"]([^'"]+)['"]\)/g;
+                     let bMatch;
+                     while((bMatch = bodyRegex.exec(block)) !== null) {
+                         const parts = bMatch[1].split('.');
+                         let current = dummyBody;
+                         for(let i=0; i<parts.length-1; i++) {
+                             current[parts[i]] = current[parts[i]] || {};
+                             current = current[parts[i]];
+                         }
+                         current[parts[parts.length-1]] = `sample_${parts[parts.length-1]}`;
+                     }
+                 }
+             }
+         }
+         if (Object.keys(dummyBody).length > 0) {
+             const jsonStr = JSON.stringify(dummyBody, null, 2);
+             bodyCell = `<details><summary>View Payload</summary><pre><code>${jsonStr}</code></pre></details>`;
+         }
+      }
+
+      fileMd += `| **${methodBadge}** | \`${fullPath}\` | | ${bodyCell} |\n`;
     }
     
     if (hasRoutes) {

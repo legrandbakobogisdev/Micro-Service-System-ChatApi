@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { validate } = require('../../shared/utils/validator');
+const { validate } = require('../../../../shared/utils/validator');
 
 exports.registerValidation = [
     body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),

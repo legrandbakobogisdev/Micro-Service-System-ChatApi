@@ -5,14 +5,14 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 
-const { createLogger } = require('../shared/utils/logger');
-const { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } = require('../shared/utils/errorHandler');
-const { tracingMiddleware } = require('../shared/utils/tracing');
+const { createLogger } = require('../../../shared/utils/logger');
+const { errorHandler, notFoundHandler, handleUnhandledRejection, handleUncaughtException } = require('../../../shared/utils/errorHandler');
+const { tracingMiddleware } = require('../../../shared/utils/tracing');
 const { connectRedis, disconnectRedis } = require('./config/redis');
 const { connectMongoDB, disconnectMongoDB } = require('./config/mongodb');
-const { getProducer } = require('../shared/kafka-config/producer');
+const { getProducer } = require('../../../shared/kafka-config/producer');
 const authRoutes = require('./routes/auth.routes');
-const ApiResponse = require('../shared/utils/response');
+const ApiResponse = require('../../../shared/utils/response');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
