@@ -86,3 +86,25 @@ Base prefix: `/api/auth`
   "oneTimePreKeys": "sample_oneTimePreKeys"
 }</code></pre></details> |
 
+## Notification Service
+
+Base prefix: `/api/notification`
+
+### Module: notification
+
+| Method | Endpoint | Description | Body |
+| --- | --- | --- | --- |
+| **🟢 GET** | `/api/notification/health` | | - |
+| **🟢 GET** | `/api/notification/history` | | - |
+| **🔵 POST** | `/api/notification/devices` | | <details><summary>View Payload</summary><pre><code>{
+  "deviceId": "sample_deviceId",
+  "fcmToken": "sample_fcmToken",
+  "deviceInfo": "sample_deviceInfo"
+}</code></pre></details> |
+| **🔵 POST** | `/api/notification/test` | | <details><summary>View Payload</summary><pre><code>{
+  "userId": "sample_userId",
+  "title": "sample_title",
+  "body": "sample_body",
+  "data": "sample_data"
+}</code></pre></details> |
+

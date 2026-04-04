@@ -143,6 +143,11 @@ STRIPE_PUBLIC_KEY=pk_test_changeme
 STRIPE_SECRET_KEY=${secrets.STRIPE_SECRET_KEY || 'sk_test_changeme'}
 STRIPE_WEBHOOK_SECRET=whsec_changeme
 
+# Firebase Configuration
+FIREBASE_PROJECT_ID=${secrets.FIREBASE_PROJECT_ID || 'your-firebase-project-id'}
+FIREBASE_PRIVATE_KEY='${secrets.FIREBASE_PRIVATE_KEY || 'your-firebase-private-key'}'
+FIREBASE_CLIENT_EMAIL=${secrets.FIREBASE_CLIENT_EMAIL || 'your-firebase-client-email'}
+
 # PayPal Configuration
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=${secrets.PAYPAL_CLIENT_SECRET || 'changeme'}
@@ -342,6 +347,10 @@ SMTP_USER=noreply@marketplace.com
 SMTP_PASSWORD=changeme
 EMAIL_FROM=noreply@marketplace.com
 TWILIO_AUTH_TOKEN=${secrets.TWILIO_AUTH_TOKEN || 'changeme'}
+# Firebase Notifications
+FIREBASE_PROJECT_ID=${secrets.FIREBASE_PROJECT_ID || 'your-firebase-project-id'}
+FIREBASE_PRIVATE_KEY='${secrets.FIREBASE_PRIVATE_KEY || 'your-firebase-private-key'}'
+FIREBASE_CLIENT_EMAIL=${secrets.FIREBASE_CLIENT_EMAIL || 'your-firebase-client-email'}
 `;
     }
 

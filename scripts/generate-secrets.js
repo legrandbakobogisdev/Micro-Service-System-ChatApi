@@ -92,6 +92,11 @@ function generateAllSecrets(defaultDbPassword = null) {
         CLOUDINARY_CLOUD_NAME: existingSecrets.CLOUDINARY_CLOUD_NAME || 'your-cloud-name',
         CLOUDINARY_API_KEY: existingSecrets.CLOUDINARY_API_KEY || 'your-api-key',
         CLOUDINARY_API_SECRET: existingSecrets.CLOUDINARY_API_SECRET || 'your-api-secret',
+
+        // Firebase Configuration
+        FIREBASE_PROJECT_ID: existingSecrets.FIREBASE_PROJECT_ID || 'your-firebase-project-id',
+        FIREBASE_PRIVATE_KEY: existingSecrets.FIREBASE_PRIVATE_KEY || 'your-firebase-private-key',
+        FIREBASE_CLIENT_EMAIL: existingSecrets.FIREBASE_CLIENT_EMAIL || 'your-firebase-client-email',
     };
 
     // Display secrets (Masked)

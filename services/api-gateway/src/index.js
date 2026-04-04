@@ -33,12 +33,28 @@ const services = {
          prefix: '/api/chat'
     },
     notification: {
-         url: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3006',
+         url: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3008',
          prefix: '/api/notification'
     },
     media: {
-         url: process.env.MEDIA_SERVICE_URL || 'http://media-service:3007',
+         url: process.env.MEDIA_SERVICE_URL || 'http://media-service:3011',
          prefix: '/api/media'
+    },
+    subscription: {
+        url: process.env.SUBSCRIPTION_SERVICE_URL || 'http://subscription-service:3003',
+        prefix: '/api/subscription'
+    },
+    payment: {
+        url: process.env.PAYMENT_SERVICE_URL || 'http://payment-service:3004',
+        prefix: '/api/payment'
+    },
+    support: {
+        url: process.env.SUPPORT_SERVICE_URL || 'http://support-service:3010',
+        prefix: '/api/support'
+    },
+    analytics: {
+        url: process.env.ANALYTICS_SERVICE_URL || 'http://analytics-service:3009',
+        prefix: '/api/analytics'
     }
 };
 

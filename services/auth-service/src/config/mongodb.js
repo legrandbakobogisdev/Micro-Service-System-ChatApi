@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { createLogger } = require('../../../../shared/utils/logger');
+const { createLogger } = require('../../shared/utils/logger');
 
 const logger = createLogger('auth-service');
 

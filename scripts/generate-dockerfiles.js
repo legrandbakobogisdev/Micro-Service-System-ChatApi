@@ -30,7 +30,7 @@ function generateDockerfile(serviceName, port) {
 # ===================================================
 # Base Stage
 # ===================================================
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 WORKDIR /app
 
 # Copy shared utilities
@@ -65,12 +65,12 @@ FROM base AS dependencies
 COPY services/${serviceName}/package*.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # ===================================================
 # Production Stage
 # ===================================================
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 

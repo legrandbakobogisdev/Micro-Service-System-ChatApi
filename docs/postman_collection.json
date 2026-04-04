@@ -569,6 +569,153 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "notification-service",
+      "item": [
+        {
+          "name": "notification - GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notification/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notification",
+                "health"
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "notification - GET /history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notification/history",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notification",
+                "history"
+              ],
+              "variable": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "notification - POST /devices",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notification/devices",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notification",
+                "devices"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceId\": \"sample_deviceId\",\n  \"fcmToken\": \"sample_fcmToken\",\n  \"deviceInfo\": \"sample_deviceInfo\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "notification - POST /test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/notification/test",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "notification",
+                "test"
+              ],
+              "variable": []
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"sample_userId\",\n  \"title\": \"sample_title\",\n  \"body\": \"sample_body\",\n  \"data\": \"sample_data\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [

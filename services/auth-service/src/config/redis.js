@@ -1,5 +1,5 @@
 const redis = require('redis');
-const { createLogger } = require('../../../../shared/utils/logger');
+const { createLogger } = require('../../shared/utils/logger');
 
 const logger = createLogger('auth-service');
 

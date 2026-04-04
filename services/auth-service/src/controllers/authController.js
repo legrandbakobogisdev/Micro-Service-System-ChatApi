@@ -2,12 +2,12 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 const { storeRefreshToken, getRefreshToken, deleteRefreshToken, storeSession } = require('../config/redis');
-const { getProducer } = require('../../../../shared/kafka-config/producer');
-const { TOPICS } = require('../../../../shared/kafka-config/topics');
-const { createLogger } = require('../../../../shared/utils/logger');
-const { AuthError, ValidationError, NotFoundError } = require('../../../../shared/utils/errorHandler');
-const asyncHandler = require('../../../../shared/utils/asyncHandler');
-const ApiResponse = require('../../../../shared/utils/response');
+const { getProducer } = require('../../shared/kafka-config/producer');
+const { TOPICS } = require('../../shared/kafka-config/topics');
+const { createLogger } = require('../../shared/utils/logger');
+const { AuthError, ValidationError, NotFoundError } = require('../../shared/utils/errorHandler');
+const asyncHandler = require('../../shared/utils/asyncHandler');
+const ApiResponse = require('../../shared/utils/response');
 
 const logger = createLogger('auth-service');
 
@@ -104,7 +104,7 @@ exports.register = asyncHandler(async (req, res) => {
  * @access Public
  */
 exports.login = asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
+    const { email, password, deviceId, fcmToken, deviceInfo } = req.body;
 
     const user = await User.findOne({ email }).select('+password');
     if (!user) throw new AuthError('Invalid credentials');
@@ -125,6 +125,7 @@ exports.login = asyncHandler(async (req, res) => {
     const sessionId = crypto.randomUUID();
     await storeSession(sessionId, {
         userId: user.id,
+        deviceId: deviceId || 'unknown',
         ip: req.ip,
         userAgent: req.get('user-agent'),
         lastAccess: new Date(),
@@ -136,12 +137,23 @@ exports.login = asyncHandler(async (req, res) => {
         await producer.sendMessage(TOPICS.USER_LOGGED_IN, {
             userId: user.id,
             email: user.email,
+            deviceId: deviceId || 'unknown',
             time: new Date(),
             ip: req.ip,
             userAgent: req.get('user-agent')
-        });
+        }, user.id);
+
+        // If FCM token is provided during login, also trigger device registration
+        if (fcmToken && deviceId) {
+            await producer.sendMessage(TOPICS.DEVICE_REGISTERED, {
+                userId: user.id,
+                deviceId,
+                fcmToken,
+                deviceInfo: deviceInfo || {}
+            }, user.id);
+        }
     } catch (error) {
-        logger.error('Failed to publish USER_LOGGED_IN event:', error);
+        logger.error('Failed to publish auth events:', error);
     }
 
     return ApiResponse.success(res, {
