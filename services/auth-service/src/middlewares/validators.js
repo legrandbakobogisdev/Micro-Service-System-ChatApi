@@ -13,7 +13,7 @@ exports.registerValidation = [
     body('lastName').optional().trim().isLength({ min: 2 }).withMessage('Last name must be at least 2 characters'),
     body('username').optional().trim().isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters')
         .matches(/^[a-zA-Z0-9_]+$/).withMessage('Username can only contain letters, numbers and underscores'),
-    body('phoneNumber').optional().trim().isMobilePhone('any').withMessage('Valid phone number is required'),
+    body('phoneNumber').trim().isMobilePhone('any').withMessage('Valid phone number is required'),
     body('about').optional().trim().isLength({ max: 500 }).withMessage('About must be max 500 characters'),
     body('provider').optional().isIn(['email', 'google', 'apple']).withMessage('Invalid provider'),
     body('profilePhotoUrl').optional({ checkFalsy: true }).trim().isURL().withMessage('Profile photo must be a valid URL'),
@@ -91,5 +91,11 @@ exports.uploadKeysValidation = [
 exports.replenishKeysValidation = [
     body('deviceId').notEmpty().withMessage('Device ID is required'),
     body('oneTimePreKeys').isArray().withMessage('OneTimePreKeys must be an array'),
+    validate
+];
+
+exports.syncContactsValidation = [
+    body('contacts').isArray({ min: 1 }).withMessage('Contacts must be a non-empty array'),
+    body('contacts.*').isString().withMessage('Each contact must be a phone number string'),
     validate
 ];

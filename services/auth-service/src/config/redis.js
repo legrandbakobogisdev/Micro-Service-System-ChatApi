@@ -66,6 +66,40 @@ async function getUserSessions(userId) {
     } catch (error) { logger.error('Error getting user sessions:', error); return []; }
 }
 
+/**
+ * Register a phone number in Redis mapping to userId
+ */
+async function registerPhoneInRedis(phone, userId) {
+    await redisClient.hSet('active_phones', phone, userId.toString());
+}
+
+/**
+ * Get userId from a phone number in Redis
+ */
+async function getUserIdByPhoneFromRedis(phone) {
+    return await redisClient.hGet('active_phones', phone);
+}
+
+/**
+ * Bulk check phone numbers against Redis
+ */
+async function checkPhonesInRedis(phones) {
+    if (!phones || phones.length === 0) return {};
+    const results = await redisClient.hmGet('active_phones', phones);
+    const map = {};
+    phones.forEach((phone, index) => {
+        if (results[index]) map[phone] = results[index];
+    });
+    return map; // Returns { phone: userId } for existing users
+}
+
+/**
+ * Remove phone from Redis
+ */
+async function removePhoneFromRedis(phone) {
+    await redisClient.hDel('active_phones', phone);
+}
+
 async function disconnectRedis() {
     if (redisClient.isOpen) { await redisClient.quit(); logger.info('Redis client disconnected gracefully'); }
 }
@@ -73,5 +107,6 @@ async function disconnectRedis() {
 module.exports = {
     redisClient, connectRedis, disconnectRedis,
     storeRefreshToken, getRefreshToken, deleteRefreshToken,
-    storeSession, getSession, deleteSession, getUserSessions
+    storeSession, getSession, deleteSession, getUserSessions,
+    registerPhoneInRedis, getUserIdByPhoneFromRedis, checkPhonesInRedis, removePhoneFromRedis
 };

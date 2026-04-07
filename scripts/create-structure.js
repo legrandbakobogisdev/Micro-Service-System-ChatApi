@@ -19,6 +19,7 @@ const SERVICES = [
   'support-service',
   'media-service',
   'chat-service',
+  'story-service',
   'api-gateway'
 ];
 

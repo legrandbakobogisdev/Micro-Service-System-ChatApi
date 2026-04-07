@@ -21,7 +21,10 @@ async function connectConsumer() {
             TOPICS.SUBSCRIPTION_CREATED,
             TOPICS.SUBSCRIPTION_EXPIRED,
             TOPICS.TICKET_CREATED,
-            TOPICS.TICKET_UPDATED
+            TOPICS.TICKET_UPDATED,
+            TOPICS.SESSION_REVOKED,
+            TOPICS.CHAT_CONTACTS_SYNCED,
+            TOPICS.USER_CREATED
         ];
 
         await consumer.subscribe(topicsToSubscribe);
@@ -51,6 +54,12 @@ async function connectConsumer() {
                 case TOPICS.TICKET_CREATED:
                 case TOPICS.TICKET_UPDATED:
                     await EventHandler.handleSupportMessage(data);
+                    break;
+                case TOPICS.CHAT_CONTACTS_SYNCED:
+                    await EventHandler.handleContactsSynced(data);
+                    break;
+                case TOPICS.USER_CREATED:
+                    await EventHandler.handleUserCreated(data);
                     break;
             }
         });

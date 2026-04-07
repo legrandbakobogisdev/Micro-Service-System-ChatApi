@@ -1,4 +1,5 @@
 const DeviceRegistry = require('../models/DeviceRegistry');
+const ContactMapping = require('../models/ContactMapping');
 const PushService = require('./pushService');
 const { createLogger } = require('../../shared/utils/logger');
 
@@ -45,18 +46,40 @@ class EventHandler {
     }
 
     /**
-     * Handle chat reception (placeholder)
+     * Handle chat reception
      */
     static async handleChatMessage(data) {
-        const { senderId, receiverId, messagePreview, chatId } = data;
+        const { senderId, participants, content, type, conversationId, groupName, mutedBy } = data;
+        
+        if (!participants || !Array.isArray(participants)) return;
+
         try {
-            await PushService.sendToUser(receiverId, {
-                title: 'New Message',
-                body: `${messagePreview}`,
-                data: { chatId, senderId }
-            }, 'chat');
+            // Determine a clean preview text safely
+            let messagePreview = (typeof content === 'string' && content.length > 50) ? content.substring(0, 50) + '...' : content;
+            if (type === 'image') messagePreview = '📷 Photo';
+            else if (type === 'video') messagePreview = '🎥 Video';
+            else if (type === 'audio') messagePreview = '🎤 Audio message';
+            else if (type === 'document') messagePreview = '📄 Document';
+            else if (type === 'system') messagePreview = content;
+
+            const title = groupName ? `New message in ${groupName}` : 'New Message';
+
+            // Send notification to all participants except the sender
+            for (const participantId of participants) {
+                // Skip sender
+                if (participantId.toString() === senderId.toString()) continue;
+                
+                // Skip if participant has muted this conversation
+                if (mutedBy && mutedBy.includes(participantId.toString())) continue;
+                
+                await PushService.sendToUser(participantId.toString(), {
+                    title,
+                    body: messagePreview || 'New message attached',
+                    data: { conversationId, senderId, type: 'chat_message' }
+                }, 'chat');
+            }
         } catch (error) {
-            logger.error(`Failed to notify message for user ${receiverId}:`, error);
+            logger.error(`Failed to notify message in conversation ${conversationId}:`, error);
         }
     }
 
@@ -108,6 +131,73 @@ class EventHandler {
             body: `You have a new response on ticket ${ticketId}`,
             data: { ticketId }
         }, 'support');
+    }
+
+    /**
+     * Handle contacts synced event from auth-service
+     * Maps phone numbers to users who have them in their contacts.
+     */
+    static async handleContactsSynced(data) {
+        const { userId, syncedContacts } = data;
+        if (!syncedContacts || !Array.isArray(syncedContacts)) return;
+
+        try {
+            logger.info(`Processing contact sync for user ${userId} (${syncedContacts.length} numbers)`);
+            
+            // Bulk upsert mappings
+            const operations = syncedContacts.map(phone => ({
+                updateOne: {
+                    filter: { phone, researcherUserId: userId },
+                    update: { $set: { lastSyncedAt: new Date() } },
+                    upsert: true
+                }
+            }));
+
+            if (operations.length > 0) {
+                await ContactMapping.bulkWrite(operations);
+            }
+        } catch (error) {
+            logger.error(`Failed to handle chat.contacts_synced for user ${userId}:`, error);
+        }
+    }
+
+    /**
+     * Handle user.created event from auth-service
+     * Notifies all "researchers" who have this new user's phone in their contacts.
+     */
+    static async handleUserCreated(data) {
+        const { userId, phoneNumber, firstName, lastName, username } = data;
+        if (!phoneNumber) return;
+
+        try {
+            logger.info(`New user created: ${userId} (${phoneNumber}). Notifying contacts...`);
+            
+            // Find everyone who has this phone number in their synced contacts
+            const observers = await ContactMapping.find({ phone: phoneNumber }).select('researcherUserId');
+            
+            if (observers.length === 0) return;
+
+            const name = firstName || username || 'A contact';
+            const title = 'User Joined ChatApp! 📱';
+            const body = `${name} is now on ChatApp! Start a conversation.`;
+
+            // Notify everyone
+            for (const observer of observers) {
+                const targetUserId = observer.researcherUserId.toString();
+                // Don't notify the user about themselves (if for some reason they have their own number)
+                if (targetUserId === userId.toString()) continue;
+
+                await PushService.sendToUser(targetUserId, {
+                    title,
+                    body,
+                    data: { action: 'open_chat', targetUserId: userId }
+                }, 'chat');
+            }
+            
+            logger.info(`Notified ${observers.length} users that ${phoneNumber} joined.`);
+        } catch (error) {
+            logger.error(`Failed to notify contacts for new user ${userId}:`, error);
+        }
     }
 }
 

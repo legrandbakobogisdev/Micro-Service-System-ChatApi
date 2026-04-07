@@ -179,6 +179,28 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # MongoDB - story
+  mongodb-story:
+    image: mongo:7
+    container_name: chatapp-mongodb-story
+    profiles: [ "isolated" ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: marketplace_user
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD_STORY:-changeme}
+    ports:
+      - "27030:27017"
+    volumes:
+      - mongodb-story-data:/data/db
+      - mongodb-story-config:/data/configdb
+    networks:
+      - marketplace-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   # Redis - Cache & Sessions
   redis:
     image: redis:7-alpine
@@ -425,6 +447,29 @@ services:
       retries: 3
     restart: unless-stopped
 
+  story-service:
+    build:
+      context: .
+      dockerfile: services/story-service/Dockerfile
+    container_name: chatapp-story-service
+    ports:
+      - "3013:3013"
+    env_file:
+      - services/story-service/.env
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - marketplace-network
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:3013/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1); });" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
   # API Gateway
   api-gateway:
     build:
@@ -444,6 +489,7 @@ services:
       - support-service
       - media-service
       - chat-service
+      - story-service
     networks:
       - marketplace-network
     healthcheck:
@@ -494,6 +540,8 @@ volumes:
   mongodb-media-config:
   mongodb-chat-data:
   mongodb-chat-config:
+  mongodb-story-data:
+  mongodb-story-config:
   redis-data:
   zookeeper-data:
   zookeeper-logs:

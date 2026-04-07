@@ -1,13 +1,22 @@
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
-const { storeRefreshToken, getRefreshToken, deleteRefreshToken, storeSession } = require('../config/redis');
 const { getProducer } = require('../../shared/kafka-config/producer');
 const { TOPICS } = require('../../shared/kafka-config/topics');
 const { createLogger } = require('../../shared/utils/logger');
 const { AuthError, ValidationError, NotFoundError } = require('../../shared/utils/errorHandler');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const ApiResponse = require('../../shared/utils/response');
+const { normalizePhoneNumber } = require('../utils/phone');
+const { 
+    storeRefreshToken, 
+    getRefreshToken, 
+    deleteRefreshToken, 
+    storeSession,
+    registerPhoneInRedis,
+    checkPhonesInRedis,
+    removePhoneFromRedis
+} = require('../config/redis');
 
 const logger = createLogger('auth-service');
 
@@ -50,13 +59,27 @@ exports.register = asyncHandler(async (req, res) => {
         }
     }
 
+    // Normalize phone number if provided
+    const normalizedPhone = phoneNumber ? normalizePhoneNumber(phoneNumber) : null;
+    if (phoneNumber && !normalizedPhone) {
+        throw new ValidationError('Invalid phone number format');
+    }
+
+    // Check if phone number already exists
+    if (normalizedPhone) {
+        const existingPhone = await User.findOne({ phoneNumber: normalizedPhone });
+        if (existingPhone) {
+            throw new ValidationError('Phone number already registered');
+        }
+    }
+
     // Create user with default settings (WhatsApp-like)
     const user = await User.create({
         email,
         password,
         firstName,
         lastName,
-        phoneNumber,
+        phoneNumber: normalizedPhone,
         username,
         about: about || 'Hey there! I am using ChatApp',
         provider: provider || 'email',
@@ -65,6 +88,11 @@ exports.register = asyncHandler(async (req, res) => {
         verificationToken: crypto.randomBytes(32).toString('hex'),
         // Default settings are defined in the schema
     });
+
+    // Store in Redis for sync (Feature)
+    if (normalizedPhone) {
+        await registerPhoneInRedis(normalizedPhone, user.id);
+    }
 
     logger.info(`User registered: ${user.id} (${user.email})`);
 
@@ -243,7 +271,26 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 
     if (firstName !== undefined) user.firstName = firstName;
     if (lastName !== undefined) user.lastName = lastName;
-    if (phoneNumber !== undefined) user.phoneNumber = phoneNumber;
+    
+    // Handle phone number update with normalization and Redis sync
+    if (phoneNumber !== undefined && phoneNumber !== user.phoneNumber) {
+        const normalized = normalizePhoneNumber(phoneNumber);
+        if (phoneNumber && !normalized) throw new ValidationError('Invalid phone number format');
+        
+        if (normalized) {
+            const existing = await User.findOne({ phoneNumber: normalized, _id: { $ne: user.id } });
+            if (existing) throw new ValidationError('Phone number already in use');
+            
+            // Remove old from Redis, add new
+            if (user.phoneNumber) await removePhoneFromRedis(user.phoneNumber);
+            await registerPhoneInRedis(normalized, user.id);
+        } else if (user.phoneNumber) {
+            await removePhoneFromRedis(user.phoneNumber);
+        }
+        
+        user.phoneNumber = normalized;
+    }
+
     if (username !== undefined) user.username = username;
     if (about !== undefined) user.about = about;
     if (profilePhotoUrl !== undefined) user.profilePhotoUrl = profilePhotoUrl;
@@ -340,7 +387,36 @@ exports.toggleBlockUser = asyncHandler(async (req, res) => {
     await user.save();
     logger.info(`User ${req.user.id} ${action} user ${targetUserId}`);
 
+    // Publish to Kafka
+    try {
+        const producer = getProducer('auth-service');
+        await producer.sendMessage(action === 'blocked' ? TOPICS.USER_BLOCKED : TOPICS.USER_UNBLOCKED, {
+            blockerId: req.user.id,
+            blockedId: targetUserId,
+            time: new Date()
+        }, req.user.id);
+    } catch (error) {
+        logger.error(`Failed to publish user.${action} event:`, error);
+    }
+
     return ApiResponse.success(res, { blockedUsers: user.settings.account.blockedUsers }, `User ${action} successfully`);
+});
+
+/**
+ * @desc Get list of blocked users
+ * @route GET /api/auth/settings/blocked-users
+ * @access Private
+ */
+exports.getBlockedUsers = asyncHandler(async (req, res) => {
+    const user = await User.findById(req.user.id);
+    if (!user) throw new NotFoundError('User not found');
+
+    const blockedUserIds = user.settings.account.blockedUsers;
+    const blockedUsers = await User.find({
+        _id: { $in: blockedUserIds }
+    }).select('firstName lastName username phoneNumber profilePhotoUrl about');
+
+    return ApiResponse.success(res, blockedUsers, 'Blocked users retrieved successfully');
 });
 
 /**
@@ -375,4 +451,69 @@ exports.updateLastSeen = asyncHandler(async (req, res) => {
     user.lastSeenAt = new Date();
     await user.save();
     return ApiResponse.success(res, { lastSeenAt: user.lastSeenAt }, 'Last seen updated');
+});
+
+/**
+ * @desc Sync contacts from device
+ * @route POST /api/auth/contacts/sync
+ * @access Private
+ */
+exports.syncContacts = asyncHandler(async (req, res) => {
+    const { contacts } = req.body; // Array of raw strings
+    const { countryCode = 'CM' } = req.query;
+
+    if (!contacts || !Array.isArray(contacts)) {
+        throw new ValidationError('Contacts array is required');
+    }
+
+    // 1. Normalize all numbers
+    const normalizedMap = {}; // { normalized: raw }
+    const normalizedList = [];
+    
+    contacts.forEach(raw => {
+        const normalized = normalizePhoneNumber(raw, countryCode);
+        if (normalized && !normalizedMap[normalized]) {
+            normalizedMap[normalized] = raw;
+            normalizedList.push(normalized);
+        }
+    });
+
+    if (normalizedList.length === 0) {
+        return ApiResponse.success(res, [], 'No valid phone numbers to sync');
+    }
+
+    // 2. Batch check in Redis (O(1) per lookup, bulk)
+    const matchesMap = await checkPhonesInRedis(normalizedList); // { phone: userId }
+    const matchUserIds = Object.values(matchesMap);
+
+    if (matchUserIds.length === 0) {
+        return ApiResponse.success(res, [], 'No contacts found on the platform');
+    }
+
+    // 3. Fetch user profiles for matches
+    const users = await User.find({ 
+        _id: { $in: matchUserIds },
+        isActive: true 
+    }).select('firstName lastName username phoneNumber profilePhotoUrl about lastSeenAt');
+
+    // 4. Format response
+    const results = users.map(user => {
+        return {
+            ...user.toObject(),
+            rawContact: normalizedMap[user.phoneNumber]
+        };
+    });
+
+    // 5. Emit Kafka session event for notification-service to map phone numbers to potential friends (Reverse lookup)
+    try {
+        const producer = getProducer('auth-service');
+        await producer.sendMessage(TOPICS.CHAT_CONTACTS_SYNCED, {
+            userId: req.user.id,
+            syncedContacts: normalizedList // This will contain ALL valid normalized numbers from device
+        });
+    } catch (err) {
+        logger.warn('Failed to publish CHAT_CONTACTS_SYNCED:', err);
+    }
+
+    return ApiResponse.success(res, results, `${results.length} contacts found`);
 });

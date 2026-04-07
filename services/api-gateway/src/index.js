@@ -55,6 +55,10 @@ const services = {
     analytics: {
         url: process.env.ANALYTICS_SERVICE_URL || 'http://analytics-service:3009',
         prefix: '/api/analytics'
+    },
+    story: {
+        url: process.env.STORY_SERVICE_URL || 'http://story-service:3013',
+        prefix: '/api/stories'
     }
 };
 

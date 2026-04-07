@@ -10,7 +10,8 @@ const {
     changePasswordValidation,
     updateSettingsValidation,
     uploadKeysValidation,
-    replenishKeysValidation
+    replenishKeysValidation,
+    syncContactsValidation
 } = require('../middlewares/validators');
 
 const router = express.Router();
@@ -25,9 +26,11 @@ router.post('/logout', authenticate, authController.logout);
 router.get('/profile', authenticate, authController.getProfile);
 router.put('/profile', authenticate, updateProfileValidation, authController.updateProfile);
 router.put('/change-password', authenticate, changePasswordValidation, authController.changePassword);
+router.post('/contacts/sync', authenticate, syncContactsValidation, authController.syncContacts);
 
 // Settings routes (WhatsApp-like)
 router.put('/settings', authenticate, updateSettingsValidation, authController.updateSettings);
+router.get('/settings/blocked-users', authenticate, authController.getBlockedUsers);
 router.post('/settings/block/:targetUserId', authenticate, authController.toggleBlockUser);
 
 // User retrieval

@@ -58,6 +58,11 @@ const SERVICE_CONFIGS = {
         dbName: 'chat_db',
         mongoPort: 27028
     },
+    'story-service': {
+        port: 3013,
+        dbName: 'story_db',
+        mongoPort: 27029
+    },
     'api-gateway': {
         port: 8000
     }
@@ -184,6 +189,7 @@ MONGODB_PASSWORD_NOTIFICATION=${secrets.MONGODB_PASSWORD_NOTIFICATION || 'change
 MONGODB_PASSWORD_ANALYTICS=${secrets.MONGODB_PASSWORD_ANALYTICS || 'changeme'}
 MONGODB_PASSWORD_SUPPORT=${secrets.MONGODB_PASSWORD_SUPPORT || 'changeme'}
 MONGODB_PASSWORD_MEDIA=${secrets.MONGODB_PASSWORD_MEDIA || 'changeme'}
+MONGODB_PASSWORD_STORY=${secrets.MONGODB_PASSWORD_STORY || 'changeme'}
 MONGODB_PASSWORD=${secrets.MONGODB_PASSWORD || 'changeme'}
 
 

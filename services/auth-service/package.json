@@ -8,7 +8,12 @@
         "dev": "nodemon src/index.js",
         "test": "echo \"Error: no test specified\" && exit 1"
     },
-    "keywords": ["auth", "jwt", "microservice", "chat"],
+    "keywords": [
+        "auth",
+        "jwt",
+        "microservice",
+        "chat"
+    ],
     "author": "",
     "license": "MIT",
     "dependencies": {
@@ -21,6 +26,7 @@
         "helmet": "^7.1.0",
         "jsonwebtoken": "^9.0.2",
         "kafkajs": "^2.2.4",
+        "libphonenumber-js": "^1.12.41",
         "mongoose": "^9.1.5",
         "morgan": "^1.10.0",
         "redis": "^4.6.10",

@@ -6,15 +6,20 @@ const TOPICS = {
     USER_VERIFIED: 'user.verified',
     USER_LOGGED_IN: 'user.logged_in',
     DEVICE_REGISTERED: 'device.registered',
+    USER_BLOCKED: 'user.blocked',
+    USER_UNBLOCKED: 'user.unblocked',
 
     // Chat Events
     CHAT_MESSAGE_SENT: 'chat.message_sent',
+    CHAT_MESSAGE_UPDATED: 'chat.message_updated',
     CHAT_MESSAGE_DELIVERED: 'chat.message_delivered',
     CHAT_MESSAGE_READ: 'chat.message_read',
     CHAT_MESSAGE_DELETED: 'chat.message_deleted',
+    CHAT_MESSAGES_READ_ALL: 'chat.messages_read_all',
     CHAT_GROUP_CREATED: 'chat.group_created',
     CHAT_GROUP_UPDATED: 'chat.group_updated',
     CHAT_TYPING: 'chat.typing',
+    CHAT_CONTACTS_SYNCED: 'chat.contacts_synced',
 
     // Notification Events
     NOTIFICATION_PUSH: 'notification.push',
@@ -24,6 +29,11 @@ const TOPICS = {
     // Media Events
     MEDIA_UPLOADED: 'media.uploaded',
     MEDIA_DELETED: 'media.deleted',
+
+    // Story Events
+    STORY_CREATED: 'story.created',
+    STORY_VIEWED: 'story.viewed',
+    STORY_DELETED: 'story.deleted',
 
     // Presence Events
     USER_ONLINE: 'presence.online',

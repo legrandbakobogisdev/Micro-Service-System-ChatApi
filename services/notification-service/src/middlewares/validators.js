@@ -1,5 +1,5 @@
 const { body } = require('express-validator');
-const { validate } = require('../../../../shared/utils/validator');
+const { validate } = require('../../shared/utils/validator');
 
 exports.registerDeviceValidation = [
     body('deviceId').notEmpty().withMessage('Device ID is required'),

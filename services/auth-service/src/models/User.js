@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
     phoneNumber: {
         type: String,
         trim: true,
+        required: true,
         sparse: true
     },
     username: {
@@ -202,7 +203,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Index for search
-userSchema.index({ phoneNumber: 1 });
+userSchema.index({ phoneNumber: 1 }, { unique: true, sparse: true });
 userSchema.index({ username: 1 });
 userSchema.index({ email: 1 });
 

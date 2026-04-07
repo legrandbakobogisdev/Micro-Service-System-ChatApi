@@ -27,6 +27,7 @@ const servicePrefixMap = {
   'analytics-service': '/api/analytics',
   'subscription-service': '/api/subscription',
   'support-service': '/api/support',
+  'story-service': '/api/stories',
 };
 
 for (const service of services) {

@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
@@ -11,34 +12,33 @@ const { tracingMiddleware } = require('../shared/utils/tracing');
 const { connectRedis, disconnectRedis } = require('./config/redis');
 const { connectMongoDB, disconnectMongoDB } = require('./config/mongodb');
 const { getProducer } = require('../shared/kafka-config/producer');
-const authRoutes = require('./routes/auth.routes');
+
+const storyRoutes = require('./routes/story.routes');
 const ApiResponse = require('../shared/utils/response');
-const { syncPhonesToRedis } = require('./services/initRedis');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const logger = createLogger('auth-service');
+const server = http.createServer(app);
+const PORT = process.env.PORT || 3013;
+const logger = createLogger('story-service');
 
 // Trust proxy
 app.set('trust proxy', 1);
 
-// Tracing
+// Middleware
 app.use(tracingMiddleware);
-
-// Security
 app.use(helmet());
 app.use(cors({ origin: process.env.CORS_ORIGIN || '*', credentials: true }));
 
 // Rate limiting
 app.use(rateLimit({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '500'),
-    message: { success: false, message: 'Too many requests, please try again after 15 minutes' }
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
+    message: { success: false, message: 'Too many requests, please try again later' }
 }));
 
 // Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Logging
 morgan.token('cid', (req) => req.correlationId || 'N/A');
@@ -46,11 +46,11 @@ app.use(morgan(':method :url :status :res[content-length] - :response-time ms | 
 
 // Health check
 app.get('/health', (req, res) => {
-    ApiResponse.success(res, { service: 'auth-service', status: 'healthy', timestamp: new Date().toISOString() });
+    ApiResponse.success(res, { service: 'story-service', status: 'healthy', timestamp: new Date().toISOString() });
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
+app.use('/api/stories', storyRoutes);
 
 // 404 & Error handlers
 app.use(notFoundHandler);
@@ -61,7 +61,7 @@ app.use(errorHandler);
  */
 async function initializeServices() {
     try {
-        logger.info('Initializing Auth Service...');
+        logger.info('Initializing Story Service...');
 
         logger.info('Connecting to Redis...');
         const redisConnected = await connectRedis();
@@ -69,7 +69,7 @@ async function initializeServices() {
 
         logger.info('Connecting to Kafka...');
         try {
-            const producer = getProducer('auth-service');
+            const producer = getProducer('story-service');
             await producer.connect();
         } catch (error) {
             logger.warn('Kafka connection failed, will retry in background:', error.message);
@@ -79,10 +79,7 @@ async function initializeServices() {
         const mongoConnected = await connectMongoDB();
         if (!mongoConnected) throw new Error('Failed to connect to MongoDB');
 
-        // Initial sync of phone numbers to Redis for contact discovery
-        await syncPhonesToRedis();
-
-        logger.info('All services initialized successfully');
+        logger.info('All database services initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize services:', error);
         throw error;
@@ -97,7 +94,7 @@ async function gracefulShutdown(signal) {
     if (server) server.close(() => logger.info('HTTP server closed'));
     await disconnectRedis();
     await disconnectMongoDB();
-    const producer = getProducer('auth-service');
+    const producer = getProducer('story-service');
     await producer.disconnect();
     logger.info('Graceful shutdown completed');
     process.exit(0);
@@ -106,13 +103,11 @@ async function gracefulShutdown(signal) {
 /**
  * Start server
  */
-let server;
-
 async function startServer() {
     try {
         await initializeServices();
-        server = app.listen(PORT, () => {
-            logger.info(`Auth Service listening on port ${PORT}`);
+        server.listen(PORT, () => {
+            logger.info(`Story Service listening on port ${PORT}`);
             logger.info(`Environment: ${process.env.NODE_ENV}`);
             logger.info(`Health check: http://localhost:${PORT}/health`);
         });

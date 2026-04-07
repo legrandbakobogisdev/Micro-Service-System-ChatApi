@@ -58,6 +58,9 @@ Base prefix: `/api/auth`
   "currentPassword": "sample_currentPassword",
   "newPassword": "sample_newPassword"
 }</code></pre></details> |
+| **🔵 POST** | `/api/auth/contacts/sync` | | <details><summary>View Payload</summary><pre><code>{
+  "contacts": "sample_contacts"
+}</code></pre></details> |
 | **🟠 PUT** | `/api/auth/settings` | | <details><summary>View Payload</summary><pre><code>{
   "privacy": "sample_privacy",
   "notifications": "sample_notifications",
@@ -84,6 +87,72 @@ Base prefix: `/api/auth`
 | **🔵 POST** | `/api/auth/keys/replenish` | | <details><summary>View Payload</summary><pre><code>{
   "deviceId": "sample_deviceId",
   "oneTimePreKeys": "sample_oneTimePreKeys"
+}</code></pre></details> |
+
+## Chat Service
+
+Base prefix: `/api/chat`
+
+### Module: conversation
+
+| Method | Endpoint | Description | Body |
+| --- | --- | --- | --- |
+| **🔵 POST** | `/api/chat/initiate` | | <details><summary>View Payload</summary><pre><code>{
+  "participantId": "sample_participantId",
+  "type": "sample_type"
+}</code></pre></details> |
+| **🟢 GET** | `/api/chat` | | - |
+| **🟢 GET** | `/api/chat/:conversationId` | | - |
+| **🟡 PATCH** | `/api/chat/:conversationId/block` | | - |
+| **🟡 PATCH** | `/api/chat/:conversationId/mute` | | - |
+| **🟡 PATCH** | `/api/chat/:conversationId/archive` | | - |
+| **🔴 DELETE** | `/api/chat/:conversationId` | | - |
+| **🔵 POST** | `/api/chat/groups` | | <details><summary>View Payload</summary><pre><code>{
+  "name": "sample_name",
+  "participants": "sample_participants"
+}</code></pre></details> |
+| **🟠 PUT** | `/api/chat/groups/:conversationId` | | <details><summary>View Payload</summary><pre><code>{
+  "name": "sample_name",
+  "description": "sample_description"
+}</code></pre></details> |
+| **🔵 POST** | `/api/chat/groups/:conversationId/members` | | <details><summary>View Payload</summary><pre><code>{
+  "members": "sample_members"
+}</code></pre></details> |
+| **🔴 DELETE** | `/api/chat/groups/:conversationId/members/:memberId` | | - |
+| **🔵 POST** | `/api/chat/groups/:conversationId/leave` | | - |
+| **🟡 PATCH** | `/api/chat/groups/:conversationId/admins/:memberId` | | - |
+
+### Module: message
+
+| Method | Endpoint | Description | Body |
+| --- | --- | --- | --- |
+| **🔵 POST** | `/api/chat` | | <details><summary>View Payload</summary><pre><code>{
+  "conversationId": "sample_conversationId",
+  "content": "sample_content",
+  "type": "sample_type"
+}</code></pre></details> |
+| **🟢 GET** | `/api/chat/:conversationId` | | - |
+| **🟡 PATCH** | `/api/chat/:messageId/status` | | <details><summary>View Payload</summary><pre><code>{
+  "status": "sample_status",
+  "deviceId": "sample_deviceId"
+}</code></pre></details> |
+| **🔴 DELETE** | `/api/chat/:messageId` | | - |
+| **🟡 PATCH** | `/api/chat/:messageId/pin` | | - |
+| **🟢 GET** | `/api/chat/:conversationId/pinned` | | - |
+| **🔵 POST** | `/api/chat/:messageId/reactions` | | <details><summary>View Payload</summary><pre><code>{
+  "emoji": "sample_emoji"
+}</code></pre></details> |
+| **🟢 GET** | `/api/chat/:conversationId/search` | | - |
+| **🔵 POST** | `/api/chat/:messageId/report` | | <details><summary>View Payload</summary><pre><code>{
+  "reason": "sample_reason",
+  "details": "sample_details"
+}</code></pre></details> |
+| **🔵 POST** | `/api/chat/:messageId/forward` | | <details><summary>View Payload</summary><pre><code>{
+  "targetConversationId": "sample_targetConversationId"
+}</code></pre></details> |
+| **🔵 POST** | `/api/chat/reports/user/:targetUserId` | | <details><summary>View Payload</summary><pre><code>{
+  "reason": "sample_reason",
+  "details": "sample_details"
 }</code></pre></details> |
 
 ## Notification Service
