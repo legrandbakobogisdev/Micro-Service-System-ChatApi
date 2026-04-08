@@ -16,5 +16,15 @@ exports.createStoryValidation = [
     body('mediaParams.backgroundColor')
         .optional()
         .isString().withMessage('Background color must be a string'),
+    body('visibility')
+        .optional()
+        .isIn(['my_contacts', 'my_contacts_except', 'only_share_with'])
+        .withMessage('Visibility must be my_contacts, my_contacts_except, or only_share_with'),
+    body('excludedViewers')
+        .optional()
+        .isArray().withMessage('excludedViewers must be an array'),
+    body('allowedViewers')
+        .optional()
+        .isArray().withMessage('allowedViewers must be an array'),
     validate
 ];

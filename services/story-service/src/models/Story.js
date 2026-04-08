@@ -29,7 +29,21 @@ const StorySchema = new mongoose.Schema({
     viewCount: {
         type: Number,
         default: 0
-    }
+    },
+    // Privacy fields (copied from user privacy settings at creation time)
+    visibility: {
+        type: String,
+        enum: ['my_contacts', 'my_contacts_except', 'only_share_with'],
+        default: 'my_contacts'
+    },
+    // Users who CANNOT see this story (when visibility = 'my_contacts_except')
+    excludedViewers: [{
+        type: mongoose.Schema.Types.ObjectId
+    }],
+    // Users who CAN see this story (when visibility = 'only_share_with')
+    allowedViewers: [{
+        type: mongoose.Schema.Types.ObjectId
+    }]
 }, {
     timestamps: true,
     versionKey: false

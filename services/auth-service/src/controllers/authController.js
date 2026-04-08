@@ -328,7 +328,12 @@ exports.updateSettings = asyncHandler(async (req, res) => {
     if (privacy) {
         Object.keys(privacy).forEach(key => {
             if (user.settings.privacy[key] !== undefined) {
-                user.settings.privacy[key] = privacy[key];
+                // Arrays like storyExcept and storyOnlyShareWith must be replaced entirely
+                if (Array.isArray(privacy[key])) {
+                    user.settings.privacy[key] = privacy[key];
+                } else {
+                    user.settings.privacy[key] = privacy[key];
+                }
             }
         });
     }

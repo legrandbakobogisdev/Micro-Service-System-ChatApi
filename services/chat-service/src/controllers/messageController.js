@@ -76,7 +76,7 @@ exports.sendMessage = asyncHandler(async (req, res) => {
             senderId,
             content: type === 'text' ? content : `[${type}]`,
             type,
-            participants: conversation.participants.map(p => p.toString()),
+            participants: conversation.participants.map(p => p.toString()).filter(p => p !== senderId.toString()),
             conversationType: conversation.type,
             groupName: conversation.groupMetadata?.name || null,
             mutedBy: conversation.mutedBy?.map(m => m.toString()) || []

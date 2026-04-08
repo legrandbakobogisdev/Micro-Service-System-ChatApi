@@ -16,13 +16,8 @@ router.use(authenticate);
 
 // ── CRUD ──
 router.post('/', sendMessageValidation, messageController.sendMessage);
-router.get('/:conversationId', messageController.getMessages);
-router.put('/:messageId', updateMessageValidation, messageController.updateMessage);
-router.patch('/read-all/:conversationId', messageController.markAllMessagesAsRead);
-router.patch('/:messageId/status', updateStatusValidation, messageController.updateMessageStatus);
-router.delete('/:messageId', messageController.deleteMessage);
 
-// ── Pin ──
+// ── Pin (specific routes BEFORE generic ones) ──
 router.patch('/:messageId/pin', messageController.togglePinMessage);
 router.get('/:conversationId/pinned', messageController.getPinnedMessages);
 
@@ -40,5 +35,12 @@ router.post('/:messageId/forward', forwardMessageValidation, messageController.f
 
 // ── Report User ──
 router.post('/reports/user/:targetUserId', reportValidation, messageController.reportUser);
+
+// ── Generic message routes (AFTER specific ones) ──
+router.get('/:conversationId', messageController.getMessages);
+router.put('/:messageId', updateMessageValidation, messageController.updateMessage);
+router.patch('/read-all/:conversationId', messageController.markAllMessagesAsRead);
+router.patch('/:messageId/status', updateStatusValidation, messageController.updateMessageStatus);
+router.delete('/:messageId', messageController.deleteMessage);
 
 module.exports = router;

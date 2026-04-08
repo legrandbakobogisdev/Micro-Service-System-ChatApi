@@ -119,7 +119,23 @@ const userSchema = new mongoose.Schema({
                 type: String,
                 enum: ['everyone', 'contacts', 'nobody'],
                 default: 'everyone'
-            }
+            },
+            // Story privacy: who can see my stories
+            storyVisibility: {
+                type: String,
+                enum: ['my_contacts', 'my_contacts_except', 'only_share_with'],
+                default: 'my_contacts'
+            },
+            // Users excluded from seeing stories (used when storyVisibility = 'my_contacts_except')
+            storyExcept: [{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }],
+            // Users allowed to see stories (used when storyVisibility = 'only_share_with')
+            storyOnlyShareWith: [{
+                type: mongoose.Schema.Types.ObjectId,
+                ref: 'User'
+            }]
         },
 
         // Notification settings

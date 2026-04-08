@@ -13,6 +13,7 @@ const TOPICS = {
     CHAT_MESSAGE_SENT: 'chat.message_sent',
     CHAT_MESSAGE_UPDATED: 'chat.message_updated',
     CHAT_MESSAGE_DELIVERED: 'chat.message_delivered',
+    CHAT_MESSAGES_DELIVERED: 'chat.messages_delivered',
     CHAT_MESSAGE_READ: 'chat.message_read',
     CHAT_MESSAGE_DELETED: 'chat.message_deleted',
     CHAT_MESSAGES_READ_ALL: 'chat.messages_read_all',
@@ -20,6 +21,8 @@ const TOPICS = {
     CHAT_GROUP_UPDATED: 'chat.group_updated',
     CHAT_TYPING: 'chat.typing',
     CHAT_CONTACTS_SYNCED: 'chat.contacts_synced',
+    CHAT_NOTIFICATION_REPLY: 'chat.notification_reply',
+    CHAT_NOTIFICATION_MARK_READ: 'chat.notification_mark_read',
 
     // Notification Events
     NOTIFICATION_PUSH: 'notification.push',

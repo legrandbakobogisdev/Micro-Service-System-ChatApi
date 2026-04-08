@@ -82,3 +82,52 @@ exports.getHistory = asyncHandler(async (req, res) => {
     logger.info(`Retrieved history for user ${userId} (${notifications.length} items)`);
     return ApiResponse.success(res, notifications, 'Notification history retrieved');
 });
+
+/**
+ * @desc Handle notification action (reply, mark as read, etc.)
+ * @route POST /api/notification/actions
+ * @access Private
+ */
+exports.handleNotificationAction = asyncHandler(async (req, res) => {
+    const { action, messageId, conversationId, replyText } = req.body;
+    const userId = req.headers['x-user-id'] || req.user?.id;
+
+    if (!action || !conversationId) {
+        throw new ValidationError('Action and Conversation ID are required');
+    }
+
+    logger.info(`Handling notification action: ${action} for user ${userId} in conversation ${conversationId}`);
+
+    // Publish event to chat-service via Kafka
+    try {
+        const producer = require('../../shared/kafka-config/producer').getProducer('notification-service');
+        
+        if (action === 'REPLY' && replyText) {
+            // Publish reply event
+            await producer.sendMessage('chat.notification_reply', {
+                userId,
+                conversationId,
+                messageId,
+                replyText,
+                timestamp: new Date()
+            });
+            
+            return ApiResponse.success(res, null, 'Reply sent from notification');
+        } else if (action === 'MARK_AS_READ') {
+            // Publish mark as read event
+            await producer.sendMessage('chat.notification_mark_read', {
+                userId,
+                conversationId,
+                messageId,
+                timestamp: new Date()
+            });
+            
+            return ApiResponse.success(res, null, 'Conversation marked as read from notification');
+        } else {
+            throw new ValidationError('Unknown action');
+        }
+    } catch (err) {
+        logger.error(`Failed to handle notification action:`, err.message);
+        throw err;
+    }
+});

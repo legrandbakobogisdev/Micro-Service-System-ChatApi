@@ -14,24 +14,24 @@ const router = express.Router();
 router.use(authenticate);
 
 // ── Conversations ──
-// Support both /api/chat/conversations/* and /api/chat/* for better front-end compatibility
+// Specific routes FIRST to avoid conflicts with generic /:conversationId
 router.post(['/conversations/initiate', '/initiate'], initiateConversationValidation, conversationController.initiateConversation);
-router.get(['/conversations', '/'], conversationController.getConversations);
 router.get(['/conversations/archived', '/archived'], conversationController.getArchivedConversations);
 
-// Actions on conversation (ensure specific routes like /archived are above this generic one)
-router.get(['/conversations/:conversationId', '/:conversationId'], conversationController.getConversationById);
-router.patch(['/conversations/:conversationId/block', '/:conversationId/block'], conversationController.toggleBlockConversation);
-router.patch(['/conversations/:conversationId/mute', '/:conversationId/mute'], conversationController.toggleMuteConversation);
-router.patch(['/conversations/:conversationId/archive', '/:conversationId/archive'], conversationController.toggleArchiveConversation);
-router.delete(['/conversations/:conversationId', '/:conversationId'], conversationController.deleteConversation);
-
-// ── Groups ──
+// ── Groups (specific routes before generic) ──
 router.post('/groups', createGroupValidation, conversationController.createGroup);
 router.put('/groups/:conversationId', updateGroupValidation, conversationController.updateGroup);
 router.post('/groups/:conversationId/members', addGroupMembersValidation, conversationController.addGroupMembers);
 router.delete('/groups/:conversationId/members/:memberId', conversationController.removeGroupMember);
 router.post('/groups/:conversationId/leave', conversationController.leaveGroup);
 router.patch('/groups/:conversationId/admins/:memberId', conversationController.toggleGroupAdmin);
+
+// ── Generic conversation routes (AFTER specific ones) ──
+router.get(['/conversations', '/'], conversationController.getConversations);
+router.get(['/conversations/:conversationId', '/:conversationId'], conversationController.getConversationById);
+router.patch(['/conversations/:conversationId/block', '/:conversationId/block'], conversationController.toggleBlockConversation);
+router.patch(['/conversations/:conversationId/mute', '/:conversationId/mute'], conversationController.toggleMuteConversation);
+router.patch(['/conversations/:conversationId/archive', '/:conversationId/archive'], conversationController.toggleArchiveConversation);
+router.delete(['/conversations/:conversationId', '/:conversationId'], conversationController.deleteConversation);
 
 module.exports = router;

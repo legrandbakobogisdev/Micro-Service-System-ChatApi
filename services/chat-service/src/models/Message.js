@@ -31,6 +31,7 @@ const MessageSchema = new mongoose.Schema({
         enum: ['sent', 'delivered', 'read'],
         default: 'sent'
     },
+    deliveredAt: Date,
     // Per-device/user delivery & read tracking for multi-device sync
     deliveredTo: [{
         userId: mongoose.Schema.Types.ObjectId,

@@ -1686,7 +1686,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"type\": \"sample_type\",\n  \"content\": \"sample_content\",\n  \"mediaParams\": \"sample_mediaParams\"\n}",
+              "raw": "{\n  \"type\": \"sample_type\",\n  \"content\": \"sample_content\",\n  \"mediaParams\": \"sample_mediaParams\",\n  \"visibility\": \"sample_visibility\",\n  \"excludedViewers\": \"sample_excludedViewers\",\n  \"allowedViewers\": \"sample_allowedViewers\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

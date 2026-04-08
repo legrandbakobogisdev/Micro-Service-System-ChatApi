@@ -191,6 +191,94 @@ module.exports = (io, socket) => {
     });
 
     /**
+     * Mark messages as delivered when user joins conversation (WhatsApp-style)
+     * Client sends this after joining and marking sent messages as delivered
+     */
+    socket.on('messages_delivered', async ({ conversationId, messageIds = [] }) => {
+        const now = new Date();
+        
+        try {
+            // Update messages to delivered status
+            if (messageIds.length > 0) {
+                await Message.updateMany(
+                    { _id: { $in: messageIds }, status: 'sent' },
+                    { $set: { status: 'delivered', deliveredAt: now } }
+                );
+            } else {
+                // If no specific messageIds, mark all sent messages in conversation as delivered
+                await Message.updateMany(
+                    { conversationId, senderId: { $ne: userId }, status: 'sent' },
+                    { $set: { status: 'delivered', deliveredAt: now } }
+                );
+            }
+
+            // Notify senders that their messages are delivered
+            socket.to(conversationId).emit('messages_status_updated', {
+                conversationId,
+                status: 'delivered',
+                deliveredBy: userId,
+                at: now
+            });
+
+            // Kafka event for analytics
+            publishKafkaEvent(TOPICS.CHAT_MESSAGES_DELIVERED, {
+                conversationId,
+                userId,
+                messageIds,
+                deliveredAt: now
+            });
+
+            logger.debug(`Messages marked as delivered in ${conversationId} by user ${userId}`);
+        } catch (err) {
+            logger.error(`Failed to mark messages as delivered:`, err.message);
+        }
+    });
+
+    /**
+     * ACK when a single message is received (WhatsApp-style)
+     * Client sends this immediately after receiving a new message
+     */
+    socket.on('message_delivered', async ({ messageId, conversationId }) => {
+        const now = new Date();
+        
+        try {
+            // Update message status to delivered
+            const message = await Message.findByIdAndUpdate(
+                messageId,
+                { 
+                    $set: { status: 'delivered', deliveredAt: now },
+                    $addToSet: { deliveredTo: userId }
+                },
+                { new: true }
+            );
+
+            if (message) {
+                // Notify sender that message is delivered
+                io.to(message.conversationId.toString()).emit('message_status_updated', {
+                    messageId: message._id,
+                    conversationId: message.conversationId,
+                    status: 'delivered',
+                    deliveredBy: userId,
+                    at: now
+                });
+
+                // Kafka event for cross-service sync
+                publishKafkaEvent(TOPICS.CHAT_MESSAGE_DELIVERED, {
+                    messageId: message._id,
+                    conversationId: message.conversationId,
+                    senderId: message.senderId,
+                    deliveredBy: userId,
+                    deliveredAt: now
+                });
+
+                logger.debug(`Message ${messageId} marked as delivered by user ${userId}`);
+            }
+        } catch (err) {
+            logger.error(`Failed to mark message as delivered:`, err.message);
+        }
+    });
+
+    /**
      * Edit message content (Feature Optimization)
      */
     socket.on('edit_message', async ({ messageId, content }) => {

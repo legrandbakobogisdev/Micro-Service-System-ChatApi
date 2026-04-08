@@ -15,7 +15,7 @@ const logger = createLogger('story-service');
  * @access Private
  */
 exports.createStory = asyncHandler(async (req, res) => {
-    const { type, content, mediaParams } = req.body;
+    const { type, content, mediaParams, visibility, excludedViewers, allowedViewers } = req.body;
     const userId = req.user.id;
 
     const expiresAt = new Date();
@@ -26,7 +26,10 @@ exports.createStory = asyncHandler(async (req, res) => {
         type,
         content,
         mediaParams,
-        expiresAt
+        expiresAt,
+        visibility: visibility || 'my_contacts',
+        excludedViewers: excludedViewers || [],
+        allowedViewers: allowedViewers || []
     });
 
     logger.info(`New story created by ${userId} (ID: ${story._id})`);
@@ -38,6 +41,7 @@ exports.createStory = asyncHandler(async (req, res) => {
             storyId: story._id,
             userId,
             type,
+            visibility: story.visibility,
             createdAt: story.createdAt,
             expiresAt: story.expiresAt
         });
@@ -54,9 +58,8 @@ exports.createStory = asyncHandler(async (req, res) => {
  * @access Private
  */
 exports.getActiveStories = asyncHandler(async (req, res) => {
-    // In a real WhatsApp-like app, we should filter by users that are in the user's contact list
-    // As an MVP, we can allow passing a list of friend IDs or fetch generic active stories
-    const { authorIds } = req.query; // Comma-separated user IDs
+    const { authorIds } = req.query; // Comma-separated user IDs (contacts of the requesting user)
+    const requesterId = req.user.id;
 
     let query = { expiresAt: { $gt: new Date() } };
 
@@ -66,8 +69,34 @@ exports.getActiveStories = asyncHandler(async (req, res) => {
 
     const stories = await Story.find(query).sort({ userId: 1, createdAt: 1 });
 
+    // Filter stories based on privacy settings
+    const visibleStories = stories.filter(story => {
+        const authorId = story.userId.toString();
+
+        // User can always see their own stories
+        if (authorId === requesterId) return true;
+
+        switch (story.visibility) {
+            case 'my_contacts':
+                // If authorIds was provided, requester already declared them as contacts
+                // so we trust the front-end filter. Otherwise, show all.
+                return true;
+
+            case 'my_contacts_except':
+                // Show to contacts EXCEPT those in the excluded list
+                return !story.excludedViewers.some(id => id.toString() === requesterId);
+
+            case 'only_share_with':
+                // Only show to users explicitly in the allowed list
+                return story.allowedViewers.some(id => id.toString() === requesterId);
+
+            default:
+                return true;
+        }
+    });
+
     // Group stories by userId
-    const groupedStories = stories.reduce((acc, story) => {
+    const groupedStories = visibleStories.reduce((acc, story) => {
         if (!acc[story.userId]) {
             acc[story.userId] = [];
         }
