@@ -1,4 +1,5 @@
 const Conversation = require('../models/Conversation');
+const User = require('../models/User');
 const asyncHandler = require('../../shared/utils/asyncHandler');
 const ApiResponse = require('../../shared/utils/response');
 const { ValidationError, NotFoundError, ForbiddenError } = require('../../shared/utils/errorHandler');
@@ -9,10 +10,48 @@ const { createLogger } = require('../../shared/utils/logger');
 
 const logger = createLogger('chat-service');
 
-// ─────────────────────────────────────────
-// CONVERSATIONS
-// ─────────────────────────────────────────
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://auth-service:3001';
 
+/**
+ * Helper to ensure users are cached in chat-service.
+ * Useful for data migration or when Kafka events were missed.
+ */
+async function syncUsers(userIds, token) {
+    if (!userIds || userIds.length === 0) return;
+    
+    // Find which users are missing from cache
+    const existingUsers = await User.find({ _id: { $in: userIds } });
+    const existingIds = existingUsers.map(u => u._id.toString());
+    const missingIds = userIds.filter(id => !existingIds.includes(id.toString()));
+    
+    if (missingIds.length === 0) return;
+    
+    logger.info(`Lazy-syncing ${missingIds.length} missing users from auth-service`);
+    
+    for (const id of missingIds) {
+        try {
+            const response = await fetch(`${AUTH_SERVICE_URL}/api/auth/users/${id}`, {
+                headers: { 'Authorization': token }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success && result.data) {
+                    const userData = result.data;
+                    await User.findByIdAndUpdate(id, {
+                        username: userData.username,
+                        firstName: userData.firstName,
+                        lastName: userData.lastName,
+                        profilePhotoUrl: userData.profilePhotoUrl,
+                        isPremium: userData.isPremium || false
+                    }, { upsert: true });
+                }
+            }
+        } catch (err) {
+            logger.warn(`Failed to lazy-sync user ${id}: ${err.message}`);
+        }
+    }
+}
 /**
  * @desc Initiate a conversation
  * @route POST /api/chat/conversations/initiate
@@ -35,13 +74,21 @@ exports.initiateConversation = asyncHandler(async (req, res) => {
         });
 
         if (conversation) {
+            // Ensure participants are populated
+            await syncUsers(sortedParticipants, req.headers.authorization);
+            await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
             return ApiResponse.success(res, conversation, 'Conversation already exists');
         }
+
+        // Ensure both users exist in chat-service cache before creating
+        await syncUsers(sortedParticipants, req.headers.authorization);
 
         conversation = await Conversation.create({
             type: 'individual',
             participants: sortedParticipants
         });
+        
+        await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
 
         logger.info(`New conversation created between ${currentUserId} and ${participantId}`);
         return ApiResponse.success(res, conversation, 'Conversation initiated successfully', 201);
@@ -71,7 +118,10 @@ exports.getConversations = asyncHandler(async (req, res) => {
         query.archivedBy = { $ne: userId };
     }
 
-    let conversationQuery = Conversation.find(query).sort({ updatedAt: -1 }).populate('lastMessage');
+    let conversationQuery = Conversation.find(query)
+        .sort({ updatedAt: -1 })
+        .populate('lastMessage')
+        .populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
 
     // Handle pagination (if disabled, return all)
     if (pagination !== 'false') {
@@ -82,6 +132,30 @@ exports.getConversations = asyncHandler(async (req, res) => {
 
     const conversations = await conversationQuery;
 
+    // Detect if populate failed (Mongoose strips unknown refs, leaving fewer participants)
+    // We need the raw IDs to compare
+    const rawConversations = await Conversation.find(query).select('participants').lean();
+    const rawParticipantMap = {};
+    for (const rc of rawConversations) {
+        rawParticipantMap[rc._id.toString()] = rc.participants.map(p => p.toString());
+    }
+    
+    // Check if any conversation has fewer populated participants than raw
+    const someFailed = conversations.some(c => {
+        const raw = rawParticipantMap[c._id.toString()] || [];
+        return c.participants.length < raw.length;
+    });
+    
+    if (someFailed) {
+        // Collect all raw participant IDs that need syncing
+        const allRawIds = [...new Set(Object.values(rawParticipantMap).flat())];
+        await syncUsers(allRawIds, req.headers.authorization);
+        // Re-populate all conversations in the list
+        for (const conv of conversations) {
+            await conv.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
+        }
+    }
+
     return ApiResponse.success(res, conversations, 'Conversations retrieved successfully');
 });
 
@@ -90,9 +164,9 @@ exports.getConversations = asyncHandler(async (req, res) => {
  * @route GET /api/chat/conversations/archived
  * @access Private
  */
-exports.getArchivedConversations = asyncHandler(async (req, res) => {
+exports.getArchivedConversations = asyncHandler(async (req, res, next) => {
     req.query.archived = 'true';
-    return exports.getConversations(req, res);
+    return exports.getConversations(req, res, next);
 });
 
 /**
@@ -108,10 +182,21 @@ exports.getConversationById = asyncHandler(async (req, res) => {
         _id: conversationId,
         participants: userId,
         isDeleted: false
-    }).populate('lastMessage');
+    })
+    .populate('lastMessage')
+    .populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
 
     if (!conversation) {
         throw new NotFoundError('Conversation not found or access denied');
+    }
+
+    // Detect if populate stripped missing users (raw has more participants than populated)
+    const rawConv = await Conversation.findById(conversationId).select('participants').lean();
+    if (rawConv && conversation.participants.length < rawConv.participants.length) {
+        const rawIds = rawConv.participants.map(p => p.toString());
+        await syncUsers(rawIds, req.headers.authorization);
+        // Re-populate
+        await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
     }
 
     return ApiResponse.success(res, conversation, 'Conversation details retrieved successfully');
@@ -285,6 +370,8 @@ exports.createGroup = asyncHandler(async (req, res) => {
         }
     });
 
+    await group.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
+
     // Kafka event
     try {
         const producer = getProducer('chat-service');
@@ -339,6 +426,7 @@ exports.updateGroup = asyncHandler(async (req, res) => {
     if (icon !== undefined) conversation.groupMetadata.icon = icon;
 
     await conversation.save();
+    await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
 
     // Kafka event
     try {
@@ -395,6 +483,7 @@ exports.addGroupMembers = asyncHandler(async (req, res) => {
 
     conversation.participants.push(...newMembers);
     await conversation.save();
+    await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium');
 
     const io = getIO();
     // Notify existing members

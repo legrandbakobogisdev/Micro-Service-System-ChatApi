@@ -3,6 +3,7 @@ const { TOPICS } = require('../../shared/kafka-config/topics');
 const { createLogger } = require('../../shared/utils/logger');
 const { getIO } = require('../socket');
 const Conversation = require('../models/Conversation');
+const User = require('../models/User');
 
 const logger = createLogger('chat-kafka');
 
@@ -18,7 +19,10 @@ async function connectConsumer() {
             TOPICS.STORY_CREATED,
             TOPICS.STORY_VIEWED,
             TOPICS.STORY_DELETED,
-            TOPICS.SUBSCRIPTION_CREATED
+            TOPICS.SUBSCRIPTION_CREATED,
+            TOPICS.SUBSCRIPTION_EXPIRED,
+            TOPICS.USER_CREATED,
+            TOPICS.USER_UPDATED
         ];
 
         await consumer.subscribe(topicsToSubscribe);
@@ -30,16 +34,62 @@ async function connectConsumer() {
 
             switch (topic) {
                 case TOPICS.SUBSCRIPTION_CREATED:
-                    const { userId, planId, expiresAt } = data;
-                    logger.info(`Notifying user ${userId} of premium upgrade via socket`);
+                    const { userId, plan, planId, endDate, expiresAt } = data;
+                    logger.info(`Updating user ${userId} to PREMIUM in chat-service cache`);
                     
+                    try {
+                        await User.findByIdAndUpdate(userId, { isPremium: true }, { upsert: true });
+                    } catch (err) {
+                        logger.error(`Failed to update premium status for user ${userId}:`, err.message);
+                    }
+
                     // Notify the specific user's personal room
                     io.to(userId).emit('premium_updated', {
                         isPremium: true,
-                        planId,
-                        expiresAt,
+                        planId: planId || plan,
+                        expiresAt: expiresAt || endDate,
                         timestamp: new Date().toISOString()
                     });
+                    break;
+
+                case TOPICS.SUBSCRIPTION_EXPIRED:
+                    try {
+                        await User.findByIdAndUpdate(data.userId, { isPremium: false });
+                        io.to(data.userId).emit('premium_updated', {
+                            isPremium: false,
+                            timestamp: new Date().toISOString()
+                        });
+                    } catch (err) {
+                        logger.error(`Failed to update premium expiry for user ${data.userId}:`, err.message);
+                    }
+                    break;
+
+                case TOPICS.USER_CREATED:
+                    try {
+                        await User.create({
+                            _id: data.userId,
+                            username: data.username,
+                            firstName: data.firstName,
+                            lastName: data.lastName,
+                            profilePhotoUrl: data.profilePhotoUrl,
+                            isPremium: false
+                        });
+                        logger.info(`User ${data.userId} cached in chat-service`);
+                    } catch (err) {
+                        logger.error(`Failed to cache user ${data.userId}:`, err.message);
+                    }
+                    break;
+
+                case TOPICS.USER_UPDATED:
+                    try {
+                        const { firstName, lastName, username, profilePhotoUrl } = data.updates || {};
+                        await User.findByIdAndUpdate(data.userId, {
+                            username, firstName, lastName, profilePhotoUrl
+                        });
+                        logger.info(`User ${data.userId} cache updated in chat-service`);
+                    } catch (err) {
+                        logger.error(`Failed to update user cache ${data.userId}:`, err.message);
+                    }
                     break;
 
                 case TOPICS.USER_BLOCKED:

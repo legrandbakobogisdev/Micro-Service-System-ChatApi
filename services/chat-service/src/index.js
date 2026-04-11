@@ -19,6 +19,9 @@ const conversationRoutes = require('./routes/conversation.routes');
 const messageRoutes = require('./routes/message.routes');
 const ApiResponse = require('../shared/utils/response');
 
+// Register models early so Mongoose knows about them for populate()
+require('./models/User');
+
 const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 3012;
