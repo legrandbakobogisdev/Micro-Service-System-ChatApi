@@ -23,14 +23,14 @@ const logger = createLogger('auth-service');
 /**
  * Generate JWT tokens
  */
-function generateTokens(userId, role) {
+function generateTokens(userId, role, isPremium = false) {
     const accessToken = jwt.sign(
-        { userId, role },
+        { userId, role, isPremium },
         process.env.JWT_ACCESS_SECRET,
         { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
     );
     const refreshToken = jwt.sign(
-        { userId, role },
+        { userId, role, isPremium },
         process.env.JWT_REFRESH_SECRET,
         { expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d' }
     );
@@ -114,7 +114,7 @@ exports.register = asyncHandler(async (req, res) => {
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.isPremium);
 
     // Store refresh token in Redis
     await storeRefreshToken(user.id, refreshToken);
@@ -147,7 +147,7 @@ exports.login = asyncHandler(async (req, res) => {
 
     logger.info(`User logged in: ${user.id} (${user.email})`);
 
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role);
+    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.isPremium);
     await storeRefreshToken(user.id, refreshToken);
 
     const sessionId = crypto.randomUUID();
@@ -214,7 +214,7 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     const user = await User.findById(decoded.userId);
     if (!user || !user.isActive) throw new AuthError('User not found or inactive');
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id, user.role);
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user.id, user.role, user.isPremium);
     await storeRefreshToken(user.id, newRefreshToken);
 
     return ApiResponse.success(res, { accessToken, refreshToken: newRefreshToken }, 'Token refreshed successfully');

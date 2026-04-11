@@ -59,4 +59,12 @@ class KafkaConsumer {
     }
 }
 
-module.exports = { KafkaConsumer };
+/**
+ * Get a Kafka consumer instance
+ * Note: unlike producers, we usually need separate instances per service/purpose
+ */
+function getConsumer(serviceName, groupId) {
+    return new KafkaConsumer(serviceName, groupId);
+}
+
+module.exports = { KafkaConsumer, getConsumer };

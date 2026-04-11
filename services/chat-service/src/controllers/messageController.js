@@ -669,7 +669,7 @@ exports.forwardMessage = asyncHandler(async (req, res) => {
             content: forwardedMessage.type === 'text' ? forwardedMessage.content : `[${forwardedMessage.type}]`,
             type: forwardedMessage.type,
             isForwarded: true,
-            participants: targetConv.participants.map(p => p.toString()),
+            participants: targetConv.participants.map(p => p.toString()).filter(p => p !== userId.toString()),
             mutedBy: targetConv.mutedBy?.map(m => m.toString()) || []
         });
     } catch (err) {

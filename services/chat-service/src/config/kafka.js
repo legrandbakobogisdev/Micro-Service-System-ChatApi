@@ -17,7 +17,8 @@ async function connectConsumer() {
             TOPICS.USER_UNBLOCKED,
             TOPICS.STORY_CREATED,
             TOPICS.STORY_VIEWED,
-            TOPICS.STORY_DELETED
+            TOPICS.STORY_DELETED,
+            TOPICS.SUBSCRIPTION_CREATED
         ];
 
         await consumer.subscribe(topicsToSubscribe);
@@ -28,6 +29,19 @@ async function connectConsumer() {
             const io = getIO();
 
             switch (topic) {
+                case TOPICS.SUBSCRIPTION_CREATED:
+                    const { userId, planId, expiresAt } = data;
+                    logger.info(`Notifying user ${userId} of premium upgrade via socket`);
+                    
+                    // Notify the specific user's personal room
+                    io.to(userId).emit('premium_updated', {
+                        isPremium: true,
+                        planId,
+                        expiresAt,
+                        timestamp: new Date().toISOString()
+                    });
+                    break;
+
                 case TOPICS.USER_BLOCKED:
                 case TOPICS.USER_UNBLOCKED:
                     const { blockerId, blockedId } = data;

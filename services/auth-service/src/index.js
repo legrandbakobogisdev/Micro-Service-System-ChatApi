@@ -82,6 +82,10 @@ async function initializeServices() {
         // Initial sync of phone numbers to Redis for contact discovery
         await syncPhonesToRedis();
 
+        logger.info('Starting Subscription Consumer...');
+        const subscriptionConsumer = require('./services/subscription.consumer');
+        await subscriptionConsumer.start();
+
         logger.info('All services initialized successfully');
     } catch (error) {
         logger.error('Failed to initialize services:', error);
@@ -95,6 +99,12 @@ async function initializeServices() {
 async function gracefulShutdown(signal) {
     logger.info(`${signal} received. Starting graceful shutdown...`);
     if (server) server.close(() => logger.info('HTTP server closed'));
+    
+    try {
+        const subscriptionConsumer = require('./services/subscription.consumer');
+        await subscriptionConsumer.stop();
+    } catch (err) { /* ignore */ }
+
     await disconnectRedis();
     await disconnectMongoDB();
     const producer = getProducer('auth-service');

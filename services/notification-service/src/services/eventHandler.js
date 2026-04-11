@@ -53,6 +53,9 @@ class EventHandler {
         
         if (!participants || !Array.isArray(participants)) return;
 
+        // Normalize senderId to string for safe comparison
+        const senderIdStr = String(senderId);
+
         try {
             // Determine a clean preview text safely
             let messagePreview = (typeof content === 'string' && content.length > 50) ? content.substring(0, 50) + '...' : content;
@@ -66,16 +69,21 @@ class EventHandler {
 
             // Send notification to all participants except the sender
             for (const participantId of participants) {
-                // Skip sender
-                if (participantId.toString() === senderId.toString()) continue;
+                const pidStr = String(participantId);
+                
+                // Skip sender — never notify the person who sent the message
+                if (pidStr === senderIdStr) {
+                    logger.debug(`Skipping push for sender ${pidStr} in conversation ${conversationId}`);
+                    continue;
+                }
                 
                 // Skip if participant has muted this conversation
-                if (mutedBy && mutedBy.includes(participantId.toString())) continue;
+                if (mutedBy && mutedBy.map(String).includes(pidStr)) continue;
                 
-                await PushService.sendToUser(participantId.toString(), {
+                await PushService.sendToUser(pidStr, {
                     title,
                     body: messagePreview || 'New message attached',
-                    data: { conversationId, senderId, type: 'chat_message' }
+                    data: { conversationId, senderId: senderIdStr, type: 'chat_message' }
                 }, 'chat');
             }
         } catch (error) {

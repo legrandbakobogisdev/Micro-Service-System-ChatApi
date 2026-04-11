@@ -55,16 +55,16 @@ const services = {
         prefix: '/api/auth'
     },
     chat: {
-         url: process.env.CHAT_SERVICE_URL || 'http://chat-service:3012',
-         prefix: '/api/chat'
+        url: process.env.CHAT_SERVICE_URL || 'http://chat-service:3012',
+        prefix: '/api/chat'
     },
     notification: {
-         url: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3008',
-         prefix: '/api/notification'
+        url: process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3008',
+        prefix: '/api/notification'
     },
     media: {
-         url: process.env.MEDIA_SERVICE_URL || 'http://media-service:3011',
-         prefix: '/api/media'
+        url: process.env.MEDIA_SERVICE_URL || 'http://media-service:3011',
+        prefix: '/api/media'
     },
     subscription: {
         url: process.env.SUBSCRIPTION_SERVICE_URL || 'http://subscription-service:3003',
@@ -91,12 +91,12 @@ const services = {
 // Create proxies for each service
 Object.keys(services).forEach(name => {
     const service = services[name];
-    
+
     // Apply specific limiters for chat service
     if (name === 'chat') {
         app.use(service.prefix, chatLimiter);
     }
-    
+
     app.use(service.prefix, createProxyMiddleware({
         target: service.url,
         changeOrigin: true,
