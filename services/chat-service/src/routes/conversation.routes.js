@@ -28,10 +28,12 @@ router.patch('/groups/:conversationId/admins/:memberId', conversationController.
 
 // ── Generic conversation routes (AFTER specific ones) ──
 router.get(['/conversations', '/'], conversationController.getConversations);
+router.get(['/conversations/:conversationId/members', '/:conversationId/members'], conversationController.getConversationMembers);
 router.get(['/conversations/:conversationId', '/:conversationId'], conversationController.getConversationById);
 router.patch(['/conversations/:conversationId/block', '/:conversationId/block'], conversationController.toggleBlockConversation);
 router.patch(['/conversations/:conversationId/mute', '/:conversationId/mute'], conversationController.toggleMuteConversation);
 router.patch(['/conversations/:conversationId/archive', '/:conversationId/archive'], conversationController.toggleArchiveConversation);
+router.patch(['/conversations/:conversationId/pin', '/:conversationId/pin'], conversationController.togglePinConversation);
 router.delete(['/conversations/:conversationId', '/:conversationId'], conversationController.deleteConversation);
 
 module.exports = router;

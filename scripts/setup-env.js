@@ -340,7 +340,21 @@ AWS_SECRET_ACCESS_KEY=${secrets.AWS_SECRET_ACCESS_KEY || 'changeme'}
 AWS_S3_BUCKET=marketplace-media
 CDN_URL=https://cdn.marketplace.com
 MAX_FILE_SIZE=10485760
-ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,application/pdf
+ALLOWED_FILE_TYPES=image/jpeg,image/png,image/gif,video/mp4,video/quicktime,audio/mpeg,audio/wav,application/pdf,audio/mp4
+`;
+    }
+
+    if (serviceName === 'payment-service') {
+        envContent += `
+# Payment Service Specific
+PAYUNIT_BASE_URL=${secrets.PAYUNIT_BASE_URL || 'https://gateway.payunit.net'}
+PAYUNIT_API_KEY=${secrets.PAYUNIT_API_KEY}
+PAYUNIT_API_USERNAME=${secrets.PAYUNIT_API_USERNAME}
+PAYUNIT_API_PASSWORD=${secrets.PAYUNIT_API_PASSWORD}
+PAYUNIT_MODE=${secrets.PAYUNIT_MODE || 'test'}
+PAYUNIT_TIMEOUT=${secrets.PAYUNIT_TIMEOUT || 10000}
+PAYUNIT_DEFAULT_CURRENCY=${secrets.PAYUNIT_DEFAULT_CURRENCY || 'XAF'}
+PAYUNIT_DEFAULT_COUNTRY=${secrets.PAYUNIT_DEFAULT_COUNTRY || 'CM'}
 `;
     }
 

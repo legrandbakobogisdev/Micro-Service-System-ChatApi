@@ -1,1 +1,31 @@
-{"name":"media-service","version":"1.0.0","main":"src/index.js","scripts":{"start":"node src/index.js"},"dependencies":{"express":"^4.18.2"}}
+{
+  "name": "media-service",
+  "version": "1.0.0",
+  "description": "Media service for ChatApp using Cloudinary and Kafka",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "dependencies": {
+    "cloudinary": "^1.41.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "mongoose": "^9.1.5",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
+    "redis": "^4.6.10",
+    "streamifier": "^0.1.1",
+    "winston": "^3.11.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

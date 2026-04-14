@@ -3,12 +3,7 @@ const { validate } = require('../../shared/utils/validator');
 
 exports.registerValidation = [
     body('email').trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
-    body('password')
-        .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
-        .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
-        .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
-        .matches(/[0-9]/).withMessage('Password must contain at least one number')
-        .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('Password must contain at least one special character'),
+    body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('Valid 6-digit verification code is required'),
     body('firstName').optional().trim().isLength({ min: 2 }).withMessage('First name must be at least 2 characters'),
     body('lastName').optional().trim().isLength({ min: 2 }).withMessage('Last name must be at least 2 characters'),
     body('username').optional().trim().isLength({ min: 3, max: 30 }).withMessage('Username must be 3-30 characters')
@@ -29,6 +24,24 @@ exports.loginValidation = [
 
 exports.refreshTokenValidation = [
     body('refreshToken').notEmpty().withMessage('Refresh token is required'),
+    validate
+];
+
+exports.requestOTPValidation = [
+    body('email').optional().trim().isEmail().withMessage('Valid email is required').normalizeEmail(),
+    body('phoneNumber').optional().trim().isMobilePhone('any').withMessage('Valid phone number is required'),
+    body().custom((value, { req }) => {
+        if (!req.body.email && !req.body.phoneNumber) {
+            throw new Error('Email or phone number is required');
+        }
+        return true;
+    }),
+    validate
+];
+
+exports.verifyOTPValidation = [
+    body('identifier').notEmpty().withMessage('Identifier (email or phone) is required'),
+    body('code').isLength({ min: 6, max: 6 }).isNumeric().withMessage('Valid 6-digit code is required'),
     validate
 ];
 

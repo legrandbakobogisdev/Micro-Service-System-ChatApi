@@ -100,6 +100,21 @@ async function removePhoneFromRedis(phone) {
     await redisClient.hDel('active_phones', phone);
 }
 
+/**
+ * OTP management
+ */
+async function storeOTP(identifier, code, expiryInSeconds = 900) {
+    await redisClient.setEx(`otp:${identifier}`, expiryInSeconds, code);
+}
+
+async function getOTP(identifier) {
+    return await redisClient.get(`otp:${identifier}`);
+}
+
+async function deleteOTP(identifier) {
+    await redisClient.del(`otp:${identifier}`);
+}
+
 async function disconnectRedis() {
     if (redisClient.isOpen) { await redisClient.quit(); logger.info('Redis client disconnected gracefully'); }
 }
@@ -107,6 +122,6 @@ async function disconnectRedis() {
 module.exports = {
     redisClient, connectRedis, disconnectRedis,
     storeRefreshToken, getRefreshToken, deleteRefreshToken,
-    storeSession, getSession, deleteSession, getUserSessions,
-    registerPhoneInRedis, getUserIdByPhoneFromRedis, checkPhonesInRedis, removePhoneFromRedis
+    registerPhoneInRedis, getUserIdByPhoneFromRedis, checkPhonesInRedis, removePhoneFromRedis,
+    storeOTP, getOTP, deleteOTP
 };

@@ -41,6 +41,9 @@ const ConversationSchema = new mongoose.Schema({
     },
     blockedBy: [{
         type: mongoose.Schema.Types.ObjectId
+    }],
+    pinnedBy: [{
+        type: mongoose.Schema.Types.ObjectId
     }]
 }, {
     timestamps: true,

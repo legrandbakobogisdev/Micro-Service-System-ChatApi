@@ -373,7 +373,8 @@ exports.deleteMessage = asyncHandler(async (req, res) => {
         await producer.sendMessage(TOPICS.CHAT_MESSAGE_DELETED, {
             messageId: message._id,
             conversationId: message.conversationId,
-            deletedBy: userId
+            deletedBy: userId,
+            url: message.metadata?.url
         });
     } catch (err) {
         logger.warn('Failed to publish message.deleted event:', err.message);
@@ -453,15 +454,30 @@ exports.toggleReaction = asyncHandler(async (req, res) => {
     if (!conversation) throw new ForbiddenError('You are not a participant in this conversation');
 
     // Check if user already reacted with the same emoji
-    const existingIndex = message.reactions.findIndex(
+    const sameEmojiIndex = message.reactions.findIndex(
         r => r.userId.toString() === userId && r.emoji === emoji
     );
 
-    if (existingIndex !== -1) {
+    let action;
+    if (sameEmojiIndex !== -1) {
         // Remove the reaction
-        message.reactions.splice(existingIndex, 1);
+        message.reactions.splice(sameEmojiIndex, 1);
+        action = 'removed';
     } else {
+        // Standard users: Only 1 total reaction per message.
+        // If they react with a new emoji, remove any existing reaction first.
+        if (!req.user.isPremium) {
+            const anyReactionIndex = message.reactions.findIndex(
+                r => r.userId.toString() === userId
+            );
+            if (anyReactionIndex !== -1) {
+                message.reactions.splice(anyReactionIndex, 1);
+            }
+        }
+
+        // Add the new reaction
         message.reactions.push({ userId, emoji, createdAt: new Date() });
+        action = 'added';
     }
 
     await message.save();
@@ -473,10 +489,10 @@ exports.toggleReaction = asyncHandler(async (req, res) => {
         reactions: message.reactions,
         updatedBy: userId,
         emoji,
-        action: existingIndex !== -1 ? 'removed' : 'added'
+        action
     });
 
-    return ApiResponse.success(res, message.reactions, existingIndex !== -1 ? 'Reaction removed' : 'Reaction added');
+    return ApiResponse.success(res, message.reactions, action === 'removed' ? 'Reaction removed' : 'Reaction added');
 });
 
 // ─────────────────────────────────────────

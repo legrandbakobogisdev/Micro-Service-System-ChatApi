@@ -6,8 +6,9 @@ const {
     registerValidation,
     loginValidation,
     refreshTokenValidation,
+    requestOTPValidation,
+    verifyOTPValidation,
     updateProfileValidation,
-    changePasswordValidation,
     updateSettingsValidation,
     uploadKeysValidation,
     replenishKeysValidation,
@@ -17,15 +18,15 @@ const {
 const router = express.Router();
 
 // Public routes
+router.post('/request-otp', requestOTPValidation, authController.requestOTP);
+router.post('/verify-otp', verifyOTPValidation, authController.verifyOTP);
 router.post('/register', registerValidation, authController.register);
-router.post('/login', loginValidation, authController.login);
 router.post('/refresh', refreshTokenValidation, authController.refreshToken);
 
 // Protected routes
 router.post('/logout', authenticate, authController.logout);
 router.get('/profile', authenticate, authController.getProfile);
 router.put('/profile', authenticate, updateProfileValidation, authController.updateProfile);
-router.put('/change-password', authenticate, changePasswordValidation, authController.changePassword);
 router.post('/contacts/sync', authenticate, syncContactsValidation, authController.syncContacts);
 
 // Settings routes (WhatsApp-like)

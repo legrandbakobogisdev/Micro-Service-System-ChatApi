@@ -203,7 +203,8 @@ exports.deleteStory = asyncHandler(async (req, res) => {
         const producer = getProducer('story-service');
         await producer.sendMessage(TOPICS.STORY_DELETED, {
             storyId,
-            userId
+            userId,
+            content: story.content
         });
     } catch (error) {
         logger.error('Failed to publish STORY_DELETED event:', error);

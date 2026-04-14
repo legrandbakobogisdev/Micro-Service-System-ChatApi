@@ -13,10 +13,15 @@ const {
     getRefreshToken, 
     deleteRefreshToken, 
     storeSession,
-    registerPhoneInRedis,
-    checkPhonesInRedis,
-    removePhoneFromRedis
+    registerPhoneInRedis, 
+    checkPhonesInRedis, 
+    removePhoneFromRedis,
+    storeOTP,
+    getOTP,
+    deleteOTP,
+    redisClient
 } = require('../config/redis');
+const mailer = require('../utils/mailer');
 
 const logger = createLogger('auth-service');
 
@@ -43,9 +48,18 @@ function generateTokens(userId, role, isPremium = false) {
  * @access Public
  */
 exports.register = asyncHandler(async (req, res) => {
-    const { email, password, firstName, lastName, phoneNumber, username, about, provider, profilePhotoUrl, profilePhotoPublicId } = req.body;
+    const { email, code, firstName, lastName, phoneNumber, username, about, profilePhotoUrl, profilePhotoPublicId, provider } = req.body;
 
-    // Check if user exists by email
+    // 0. Verify OTP code
+    const identifier = email || (phoneNumber ? normalizePhoneNumber(phoneNumber) : null);
+    const storedCode = await getOTP(identifier);
+    if (!storedCode || storedCode !== code) {
+        throw new AuthError('Invalid or expired verification code');
+    }
+    // Cleanup OTP
+    await deleteOTP(identifier);
+
+    // 1. Check if user exists by email
     const existingUser = await User.findOne({ email });
     if (existingUser) {
         throw new ValidationError('Email already registered');
@@ -76,7 +90,6 @@ exports.register = asyncHandler(async (req, res) => {
     // Create user with default settings (WhatsApp-like)
     const user = await User.create({
         email,
-        password,
         firstName,
         lastName,
         phoneNumber: normalizedPhone,
@@ -85,8 +98,8 @@ exports.register = asyncHandler(async (req, res) => {
         provider: provider || 'email',
         profilePhotoUrl,
         profilePhotoPublicId,
+        isVerified: true, // Verified via OTP
         verificationToken: crypto.randomBytes(32).toString('hex'),
-        // Default settings are defined in the schema
     });
 
     // Store in Redis for sync (Feature)
@@ -126,77 +139,8 @@ exports.register = asyncHandler(async (req, res) => {
     }, 'User registered successfully');
 });
 
-/**
- * @desc Login user
- * @route POST /api/auth/login
- * @access Public
- */
-exports.login = asyncHandler(async (req, res) => {
-    const { email, password, deviceId, fcmToken, deviceInfo } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) throw new AuthError('Invalid credentials');
-    if (!user.isActive) throw new AuthError('Account is suspended');
 
-    const isPasswordValid = await user.comparePassword(password);
-    if (!isPasswordValid) throw new AuthError('Invalid credentials');
-
-    user.lastLoginAt = new Date();
-    user.lastSeenAt = new Date();
-    await user.save();
-
-    logger.info(`User logged in: ${user.id} (${user.email})`);
-
-    const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.isPremium);
-    await storeRefreshToken(user.id, refreshToken);
-
-    const sessionId = crypto.randomUUID();
-    await storeSession(sessionId, {
-        userId: user.id,
-        deviceId: deviceId || 'unknown',
-        ip: req.ip,
-        userAgent: req.get('user-agent'),
-        lastAccess: new Date(),
-        location: 'Unknown'
-    }, 604800);
-
-    try {
-        const producer = getProducer('auth-service');
-        await producer.sendMessage(TOPICS.USER_LOGGED_IN, {
-            userId: user.id,
-            email: user.email,
-            deviceId: deviceId || 'unknown',
-            time: new Date(),
-            ip: req.ip,
-            userAgent: req.get('user-agent')
-        }, user.id);
-
-        // If FCM token is provided during login, also trigger device registration
-        if (fcmToken && deviceId) {
-            await producer.sendMessage(TOPICS.DEVICE_REGISTERED, {
-                userId: user.id,
-                deviceId,
-                fcmToken,
-                deviceInfo: deviceInfo || {}
-            }, user.id);
-        }
-    } catch (error) {
-        logger.error('Failed to publish auth events:', error);
-    }
-
-    return ApiResponse.success(res, {
-        user: user.toSafeObject(),
-        accessToken,
-        refreshToken,
-        sessionId
-    }, 'Login successful');
-});
-
-/**
- * @desc Refresh access token
- * @route POST /api/auth/refresh
- * @access Public
- */
 exports.refreshToken = asyncHandler(async (req, res) => {
     const { refreshToken } = req.body;
     if (!refreshToken) throw new ValidationError('Refresh token required');
@@ -218,6 +162,130 @@ exports.refreshToken = asyncHandler(async (req, res) => {
     await storeRefreshToken(user.id, newRefreshToken);
 
     return ApiResponse.success(res, { accessToken, refreshToken: newRefreshToken }, 'Token refreshed successfully');
+});
+
+/**
+ * @desc Request login/register OTP
+ * @route POST /api/auth/request-otp
+ * @access Public
+ */
+exports.requestOTP = asyncHandler(async (req, res) => {
+    const { email, phoneNumber } = req.body;
+    let targetEmail = email;
+
+    // If only phone provided, find user's email
+    if (phoneNumber && !email) {
+        const normalized = normalizePhoneNumber(phoneNumber);
+        const user = await User.findOne({ phoneNumber: normalized });
+        if (!user) {
+            throw new NotFoundError('No account found with this phone number. Please provide an email for your first connection.');
+        }
+        targetEmail = user.email;
+    }
+
+    if (!targetEmail) {
+        throw new ValidationError('Email is required for new users');
+    }
+
+    // Generate 6-digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store in Redis (use identifier for lookup later)
+    // If email is provided, use it as primary identifier since it receives the code
+    const identifier = targetEmail || (phoneNumber ? normalizePhoneNumber(phoneNumber) : null);
+    await storeOTP(identifier, code);
+
+    // Send email
+    await mailer.sendOTP(targetEmail, code);
+
+    logger.info(`OTP requested for ${identifier}`);
+    return ApiResponse.success(res, { identifier }, 'Verification code sent to email');
+});
+
+/**
+ * @desc Verify OTP and Login/Ready for Register
+ * @route POST /api/auth/verify-otp
+ * @access Public
+ */
+exports.verifyOTP = asyncHandler(async (req, res) => {
+    let { identifier, code, deviceId, fcmToken, deviceInfo } = req.body;
+
+    // Normalize identifier to match how it was stored
+    if (identifier.includes('@')) {
+        identifier = identifier.toLowerCase().trim();
+    } else {
+        const normalized = normalizePhoneNumber(identifier);
+        if (normalized) identifier = normalized;
+    }
+
+    const storedCode = await getOTP(identifier);
+    if (!storedCode || storedCode !== code) {
+        throw new AuthError('Invalid or expired verification code');
+    }
+
+    // Code is valid (Will be deleted in login flow below or in register function)
+
+    // Check if user exists
+    let user;
+    if (identifier.includes('@')) {
+        user = await User.findOne({ email: identifier.toLowerCase() });
+    } else {
+        const normalized = normalizePhoneNumber(identifier);
+        user = await User.findOne({ phoneNumber: normalized });
+    }
+
+    if (user) {
+        // LOGIN FLOW
+        await deleteOTP(identifier);
+        if (!user.isActive) throw new AuthError('Account is suspended');
+        
+        user.lastLoginAt = new Date();
+        user.lastSeenAt = new Date();
+        user.isVerified = true;
+        await user.save();
+
+        const { accessToken, refreshToken } = generateTokens(user.id, user.role, user.isPremium);
+        await storeRefreshToken(user.id, refreshToken);
+
+        const sessionId = crypto.randomUUID();
+        await storeSession(sessionId, {
+            userId: user.id,
+            deviceId: deviceId || 'unknown',
+            ip: req.ip,
+            userAgent: req.get('user-agent'),
+            lastAccess: new Date(),
+            location: 'Unknown'
+        }, 604800);
+
+        try {
+            const producer = getProducer('auth-service');
+            await producer.sendMessage(TOPICS.USER_LOGGED_IN, {
+                userId: user.id,
+                email: user.email,
+                deviceId: deviceId || 'unknown',
+                time: new Date(),
+                ip: req.ip,
+                userAgent: req.get('user-agent')
+            }, user.id);
+        } catch (err) {
+            logger.error('Failed to publish login event:', err);
+        }
+
+        return ApiResponse.success(res, {
+            user: user.toSafeObject(),
+            accessToken,
+            refreshToken,
+            sessionId,
+            isNewUser: false
+        }, 'Login successful');
+    } else {
+        // REGISTRATION PATH - just confirm code is valid, user must call /register
+        return ApiResponse.success(res, {
+            identifier,
+            code, // Return code so client can send it back to /register if needed, or just tell client to call /register
+            isNewUser: true
+        }, 'Verification successful. Please complete your profile.');
+    }
 });
 
 /**
@@ -424,26 +492,7 @@ exports.getBlockedUsers = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, blockedUsers, 'Blocked users retrieved successfully');
 });
 
-/**
- * @desc Change password
- * @route PUT /api/auth/change-password
- * @access Private
- */
-exports.changePassword = asyncHandler(async (req, res) => {
-    const { currentPassword, newPassword } = req.body;
-    const user = await User.findById(req.user.id).select('+password');
-    if (!user) throw new NotFoundError('User not found');
 
-    const isPasswordValid = await user.comparePassword(currentPassword);
-    if (!isPasswordValid) throw new AuthError('Current password is incorrect');
-
-    user.password = newPassword;
-    await user.save();
-    await deleteRefreshToken(user.id);
-
-    logger.info(`Password changed for user: ${user.id}`);
-    return ApiResponse.success(res, null, 'Password changed successfully. Please login again.');
-});
 
 /**
  * @desc Update last seen timestamp

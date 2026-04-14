@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 
 /**
  * User Schema for Real-Time Chat Application
@@ -13,11 +12,6 @@ const userSchema = new mongoose.Schema({
         lowercase: true,
         trim: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please fill a valid email address']
-    },
-    password: {
-        type: String,
-        required: true,
-        select: true
     },
     phoneNumber: {
         type: String,
@@ -228,27 +222,10 @@ userSchema.index({ username: 1 });
 userSchema.index({ email: 1 });
 
 /**
- * Pre-save middleware to hash password
- */
-userSchema.pre('save', async function () {
-    if (!this.isModified('password')) return;
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-});
-
-/**
- * Compare password with hashed password
- */
-userSchema.methods.comparePassword = async function (candidatePassword) {
-    return await bcrypt.compare(candidatePassword, this.password);
-};
-
-/**
  * Get user without sensitive fields
  */
 userSchema.methods.toSafeObject = function () {
     const user = this.toObject();
-    delete user.password;
     delete user.__v;
     delete user.verificationToken;
     delete user.resetPasswordToken;

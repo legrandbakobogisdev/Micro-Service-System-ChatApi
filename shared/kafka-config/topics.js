@@ -31,6 +31,7 @@ const TOPICS = {
 
     // Media Events
     MEDIA_UPLOADED: 'media.uploaded',
+    MEDIA_PROCESSED: 'media.processed',
     MEDIA_DELETED: 'media.deleted',
 
     // Story Events

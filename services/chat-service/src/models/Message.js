@@ -24,7 +24,18 @@ const MessageSchema = new mongoose.Schema({
         fileSize: Number,
         mimeType: String,
         url: String,
-        duration: Number // for voice/video
+        thumbnailUrl: String,
+        blurhash: String,
+        fileHash: String,
+        duration: Number, // for voice/video
+        isEncrypted: {
+            type: Boolean,
+            default: false
+        },
+        nonce: String,
+        senderIdentityKey: String,
+        recipientIdentityKey: String,
+        sessionId: String
     },
     status: {
         type: String,

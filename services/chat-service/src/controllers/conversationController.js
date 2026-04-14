@@ -343,6 +343,48 @@ exports.toggleArchiveConversation = asyncHandler(async (req, res) => {
     return ApiResponse.success(res, { isArchived }, isArchived ? 'Conversation archived' : 'Conversation unarchived');
 });
 
+/**
+ * @desc Toggle pin for a conversation
+ * @route PATCH /api/chat/conversations/:conversationId/pin
+ * @access Private
+ */
+exports.togglePinConversation = asyncHandler(async (req, res) => {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId
+    });
+
+    if (!conversation) {
+        throw new NotFoundError('Conversation not found');
+    }
+
+    if (!conversation.pinnedBy) {
+        conversation.pinnedBy = [];
+    }
+
+    const pinnedIndex = conversation.pinnedBy.indexOf(userId);
+    const isPinned = pinnedIndex === -1;
+
+    if (isPinned) {
+        conversation.pinnedBy.push(userId);
+    } else {
+        conversation.pinnedBy.splice(pinnedIndex, 1);
+    }
+
+    await conversation.save();
+
+    const io = getIO();
+    io.to(userId.toString()).emit('conversation_pin_status', {
+        conversationId,
+        isPinned
+    });
+
+    return ApiResponse.success(res, { isPinned }, isPinned ? 'Conversation pinned' : 'Conversation unpinned');
+});
+
 // ─────────────────────────────────────────
 // GROUP MANAGEMENT (Feature 3)
 // ─────────────────────────────────────────
@@ -656,4 +698,55 @@ exports.toggleGroupAdmin = asyncHandler(async (req, res) => {
     });
 
     return ApiResponse.success(res, conversation, isPromoted ? 'Member promoted to admin' : 'Admin demoted to member');
+});
+
+/**
+ * @desc Get members of a conversation
+ * @route GET /api/chat/conversations/:conversationId/members
+ * @access Private
+ */
+exports.getConversationMembers = asyncHandler(async (req, res) => {
+    const { conversationId } = req.params;
+    const userId = req.user.id;
+
+    // Check if user is part of the conversation
+    const conversation = await Conversation.findOne({
+        _id: conversationId,
+        participants: userId,
+        isDeleted: false
+    });
+
+    if (!conversation) {
+        throw new NotFoundError('Conversation not found or access denied');
+    }
+
+    // Populate all participants to get their detailed info
+    await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium lastSeenAt onlineStatus');
+
+    // Make sure we have the users synced in case they are missing from the replica
+    const rawConv = await Conversation.findById(conversationId).select('participants').lean();
+    if (rawConv && conversation.participants.length < rawConv.participants.length) {
+        const rawIds = rawConv.participants.map(p => p.toString());
+        await syncUsers(rawIds, req.headers.authorization);
+        // Re-populate
+        await conversation.populate('participants', 'username firstName lastName profilePhotoUrl isPremium lastSeenAt onlineStatus');
+    }
+
+    // Prepare response data with additional info if it's a group
+    let responseData = conversation.participants;
+    
+    // Optional: If you want to include admin info for groups
+    if (conversation.type === 'group' && conversation.groupMetadata?.admins) {
+        responseData = conversation.participants.map(member => {
+            const isGroupAdmin = conversation.groupMetadata.admins.some(adminId => adminId.toString() === member._id.toString());
+            const isCreator = conversation.groupMetadata.creatorId?.toString() === member._id.toString();
+            return {
+                ...member.toObject(),
+                isAdmin: isGroupAdmin,
+                isCreator: isCreator
+            };
+        });
+    }
+
+    return ApiResponse.success(res, responseData, 'Conversation members retrieved successfully');
 });

@@ -29,6 +29,7 @@
         "libphonenumber-js": "^1.12.41",
         "mongoose": "^9.1.5",
         "morgan": "^1.10.0",
+        "nodemailer": "^8.0.5",
         "redis": "^4.6.10",
         "winston": "^3.11.0"
     },

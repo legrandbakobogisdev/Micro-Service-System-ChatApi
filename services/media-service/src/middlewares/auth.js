@@ -11,9 +11,12 @@ exports.authenticate = asyncHandler(async (req, res, next) => {
     const token = authHeader.substring(7);
     try {
         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-        // Decentralized auth: we trust the token content if signature is valid
-        // In a more robust system, we might check Redis for blacklisted tokens or call auth-service
-        req.user = { id: decoded.userId, role: decoded.role, isPremium: decoded.isPremium || false }; 
+        // Important: we include isPremium in the user object
+        req.user = { 
+            id: decoded.userId, 
+            role: decoded.role, 
+            isPremium: decoded.isPremium || false 
+        }; 
         next();
     } catch (error) {
         if (error.name === 'JsonWebTokenError') throw new AuthError('Invalid token');
